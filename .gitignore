@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env
+.colag/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.next-dev/
+apps/web/public/monaco/

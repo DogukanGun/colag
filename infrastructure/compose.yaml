@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: colag
+      POSTGRES_PASSWORD: colag
+      POSTGRES_DB: colag
+    ports: ['127.0.0.1:54329:5432']
+    volumes: ['postgres:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U colag']
+      interval: 3s
+      retries: 15
+  redis:
+    image: redis:7-alpine
+    ports: ['127.0.0.1:63799:6379']
+    volumes: ['redis:/data']
+    command: ['redis-server', '--appendonly', 'yes']
+volumes:
+  postgres:
+  redis:

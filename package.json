@@ -1,0 +1,44 @@
+{
+  "name": "colag",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "dev": "node --import tsx scripts/dev.ts",
+    "dev:web": "pnpm --filter @colag/web dev",
+    "dev:service": "tsx watch apps/service/src/index.ts",
+    "build": "tsx scripts/prepare-web.ts && pnpm --filter @colag/web build",
+    "typecheck": "tsc --noEmit && pnpm --filter @colag/web typecheck",
+    "test": "tsx --test tests/*.test.ts",
+    "db:migrate": "tsx packages/database/src.ts",
+    "demo:a2a": "tsx packages/adapters/src/demo-agent.ts",
+    "test:integration": "tsx scripts/test-integration.ts",
+    "test:browser": "node scripts/browser-check.mjs",
+    "test:claude": "tsx scripts/smoke-claude.ts",
+    "infra:up": "docker compose -f infrastructure/compose.yaml up -d",
+    "infra:down": "docker compose -f infrastructure/compose.yaml down",
+    "test:live": "tsx scripts/test-live.ts"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "1.2.1",
+    "@hocuspocus/server": "^3.2.3",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "fastify": "^5.6.0",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/cookie": "^11.0.2",
+    "pg": "^8.16.3",
+    "redis": "^5.8.2",
+    "yjs": "^13.6.27",
+    "zod": "^3.25.76",
+    "express": "^5.1.0",
+    "@tiptap/html": "^3.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "@types/pg": "^8.15.5",
+    "@types/express": "^5.0.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2",
+    "@playwright/test": "^1.55.1"
+  },
+  "type": "module"
+}

@@ -1,0 +1,9 @@
+# Domain model
+
+A Project contains memberships, agents, documents, runs, tasks, decisions, changes, reviews and artifacts. Actor is human, agent or system. Agent role, capabilities and permissions are configuration. Run owns an immutable approved plan, task execution attempts, repository and candidate commit. Tasks form a directed acyclic graph within one project/run and have one active owner; delegation records sender, recipient and reason. Completing a prerequisite enables dependants but does not bypass plan approval.
+
+Task states: pending, claimed, working, blocked, review, completed, failed, cancelled. Runs: planning, awaiting_approval, running, blocked, reviewing, awaiting_merge, completed, failed, cancelled. Decisions: proposed, approved, rejected, superseded. Changes bind a task and author to a branch and exact commit; reviews bind reviewer and status to that commit. Artifacts hold test output, diffs or structured results with actor attribution. Approval is invalidated whenever candidate SHA changes.
+
+Permissions grant actions by resource; deny by default. Identity comes from authenticated credentials, never request body actor IDs. Human-only actions include plan approval and merge. Locks have owner, resource, fencing token and expiry; PostgreSQL remains authoritative for task claims and command idempotency. Presence is a Redis TTL record, not permanent heartbeats.
+
+Resources store stable IDs, project ID, JSON payload, version and timestamps. Relationships needing uniqueness or concurrency use SQL keys and locked transactions. Each successful command writes resource changes and a durable event in one transaction. Idempotency keys are scoped to actor and reject a different request body. Events include sequence, ID, actor, project, type, resource, timestamp and payload. Document snapshots are persisted Yjs updates separately from structured resources.

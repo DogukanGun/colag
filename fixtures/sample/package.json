@@ -1,0 +1,18 @@
+{
+  "name": "colag-auth-sample",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test backend/auth.test.mjs",
+    "dev": "vite --host 127.0.0.1",
+    "dev:api": "node backend/server.mjs",
+    "dev:web": "vite"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
