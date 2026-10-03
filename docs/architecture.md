@@ -2,6 +2,28 @@
 
 Colag is a modular monolith: a Next.js client, a Fastify collaboration service, and a supervised Claude Code runtime. PostgreSQL owns users, sessions, room memberships, structured resources, and the transactional event log. Redis owns transient presence and leases. Hocuspocus persists Yjs documents in PostgreSQL. Git owns source code. The browser never controls domain transitions directly.
 
+```mermaid
+flowchart LR
+  browser[Browser]
+  client[Coding client]
+  service[Collaboration service]
+  claude[Claude runtime]
+  postgres[PostgreSQL]
+  redis[Redis]
+  yjs[Yjs document]
+  git[Git worktrees]
+
+  browser --> service
+  client -->|MCP| service
+  service --> claude
+  claude -->|stdio MCP| service
+  service --> postgres
+  service --> redis
+  service --> yjs
+  service --> git
+  yjs --> postgres
+```
+
 People sign in with an email code. The browser session is an HttpOnly cookie, not an agent credential and not an MCP token. A human actor is built per request from that user. It has no baked-in room and no wildcard permission. `authorize` allows a human action only when that user is a member of the room in the URL. See [product-flows.md](product-flows.md) for the ways into a room and which token opens what.
 
 The protocol and domain packages contain no UI, ORM, A2A, or MCP imports. REST, MCP, and A2A adapters call the same authorized command service. Hosted agents still use a per-run bearer in `credentials`, bound to one room and one run. External coding clients use a revocable bearer stored only as a hash on `mcp_connections`. That Streamable HTTP MCP exposes the collaboration tools and does not include plan approval or merge. A session cookie cannot authenticate MCP, and an agent token cannot open the UI.

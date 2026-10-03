@@ -1,6 +1,30 @@
-# Product flows
+# User flows
 
 Colag is a room. A person signs in, then brings their own coding client, commands an agent Colag hosts, or makes an app together on one board. The coding paths share a plan, claimed tasks, isolated worktrees, and a human approve/merge gate. The board is that same shared plan.
+
+What you see in the app:
+
+1. Enter an email. In development the next response includes the code. The first successful code asks for a display name and creates the account.
+2. Home asks how you want to work. The three choices are below. Rooms you already belong to are listed under them.
+3. Inside a room, the people column shows members, connected clients, and hosted agents that are actually present. The center is the shared plan or design board. **Changes** appears once there is a candidate commit.
+4. Sign out revokes the browser session. The room is not visible again until you sign in.
+
+The rest of this page is the rule for each path. The GitHub overview is the [README](../README.md).
+
+```mermaid
+flowchart TD
+  request[Request a code]
+  verify[Verify the code]
+  named[Set a display name]
+  home[Home]
+  signOut[Sign out]
+  hidden[Rooms hidden until the next sign-in]
+
+  request --> verify
+  verify -->|New email| named --> home
+  verify -->|Returning user| home
+  home --> signOut --> hidden
+```
 
 ## User
 
@@ -24,9 +48,39 @@ A wrong code, an expired code, and a code that was already used are different er
 
 A session cookie is not an MCP credential. An agent token is not a session: `GET /api/v1/me` rejects it. MCP tokens are stored only as a hash and stop working when the connection is revoked.
 
+```mermaid
+flowchart LR
+  session[Session cookie]
+  document[Document token]
+  agent[Hosted agent bearer]
+  mcp[MCP connection bearer]
+  ui[Home, rooms, approve, merge]
+  editor[Shared plan editor]
+  tools[Agent tools for one run]
+  remote[MCP tools for one room]
+
+  session --> ui
+  document --> editor
+  agent --> tools
+  mcp --> remote
+```
+
 ## Rooms
 
 A signed-in user creates a room and becomes its owner. Someone else joins only by accepting an invite. Membership is the only way in. A member of room A who requests room B gets 403.
+
+```mermaid
+flowchart TD
+  owner[Owner creates Room A]
+  invite[Invite accepted]
+  stranger[No membership in Room A]
+  roomA[Room A]
+  denied[403]
+
+  owner --> roomA
+  invite --> roomA
+  stranger --> denied
+```
 
 A room is still a project internally, so events, documents, runs, and worktrees keep their current ids. Each room gets its own disposable Git repository on the server. The service binds to `COLAG_HOST` and allows the browser origin in `COLAG_PUBLIC_ORIGIN`. Unauthenticated requests still fail.
 
