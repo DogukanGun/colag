@@ -1,9 +1,11 @@
 import { runProcess } from "../../runtime/src/process.ts";
 
+import { spawn } from "node:child_process";
 import {
   cp,
   mkdir,
   readFile,
+  rm,
   writeFile,
   realpath,
   lstat,
@@ -209,6 +211,41 @@ export async function integrate(
     }
   }
   return { work, sha: await git(work, "rev-parse", "HEAD") };
+}
+export async function exportCommit(runId: string, sha: string, dest: string) {
+  const repo = repoPath(runId);
+  await git(repo, "rev-parse", "--verify", `${sha}^{commit}`);
+  await rm(dest, { recursive: true, force: true });
+  await mkdir(dest, { recursive: true });
+  await new Promise<void>((resolve, reject) => {
+    const archive = spawn("git", ["-C", repo, "archive", sha], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const extract = spawn("tar", ["-x", "-C", dest], {
+      stdio: ["pipe", "ignore", "pipe"],
+    });
+    let error = "";
+    archive.stderr.on("data", (chunk) => {
+      error += chunk;
+    });
+    extract.stderr.on("data", (chunk) => {
+      error += chunk;
+    });
+    archive.stdout.pipe(extract.stdin);
+    archive.on("error", reject);
+    extract.on("error", reject);
+    extract.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(error || `Could not export ${sha}`));
+    });
+  });
+}
+export function zipCommit(runId: string, sha: string) {
+  return spawn(
+    "git",
+    ["-C", repoPath(runId), "archive", "--format=zip", sha],
+    { stdio: ["ignore", "pipe", "pipe"] },
+  );
 }
 export async function diffFiles(runId: string, base: string, sha: string) {
   const repo = repoPath(runId);

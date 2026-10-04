@@ -28,6 +28,10 @@ const DiffEditor = dynamic(() => import("./code-diff"), {
   ssr: false,
   loading: () => <div className="loading">Loading diff editor…</div>,
 });
+const SandboxTerminal = dynamic(() => import("./sandbox-terminal"), {
+  ssr: false,
+  loading: () => <div className="loading">Opening the sandbox…</div>,
+});
 type Entity = {
   id: string;
   kind: string;
@@ -89,6 +93,14 @@ export default function Room({ id }: { id: string }) {
   const [command, setCommand] = useState("");
   const [title, setTitle] = useState("");
   const [docToken, setDocToken] = useState("");
+  const [build, setBuild] = useState<{
+    sha: string | null;
+    ref: string | null;
+    running: boolean;
+    bought: boolean;
+    streamUrl?: string;
+  } | null>(null);
+  const [sandboxError, setSandboxError] = useState("");
   const panelRef = useRef<HTMLElement>(null);
   const load = useCallback(async () => {
     const data = await api(`/projects/${id}`);
@@ -131,6 +143,26 @@ export default function Room({ id }: { id: string }) {
       clearTimeout(timer);
     };
   }, [snap?.project?.id, id, load]);
+  useEffect(() => {
+    if (tab !== "build") return;
+    let cancel = false;
+    setSandboxError("");
+    void (async () => {
+      try {
+        const info = await api(`/projects/${id}/build`);
+        if (cancel) return;
+        setBuild(info);
+        if (!info.sha) return;
+        const started = await api(`/projects/${id}/sandbox`, { body: {} });
+        if (!cancel) setBuild(started);
+      } catch (e: any) {
+        if (!cancel) setSandboxError(e.message);
+      }
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [tab, id]);
   useEffect(() => {
     if (!drawer) return;
     const close = (e: KeyboardEvent) => {
@@ -377,6 +409,9 @@ export default function Room({ id }: { id: string }) {
             <button className={tab === "artifacts" ? "active" : ""} onClick={() => setTab("artifacts")}>
               <Layers size={16} /> Artifacts <span className="count">{artifacts.length}</span>
             </button>
+            <button className={tab === "build" ? "active" : ""} onClick={() => setTab("build")}>
+              <Terminal size={16} /> Build
+            </button>
           </div>
           {run && (
             <div
@@ -523,6 +558,70 @@ export default function Room({ id }: { id: string }) {
                   <p>A diff appears after an agent proposes work from its own workspace.</p>
                 </div>
               )}
+            </div>
+          )}
+          {tab === "build" && (
+            <div className="build-view">
+              {!build?.sha ? (
+                <div className="empty-state">
+                  <strong>Nothing has been built</strong>
+                  <p>The sandbox opens when this room has a commit to run.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="build-bar">
+                    <span>
+                      <strong>{build.sha.slice(0, 8)}</strong>
+                      <small>{build.ref === "candidate" ? "Candidate" : "Main"} · /workspace</small>
+                    </span>
+                    <button
+                      className="secondary small"
+                      disabled={!!busy || build.bought}
+                      onClick={() => {
+                        setBusy("buy");
+                        void api(`/projects/${id}/build/buy`, { body: { sha: build.sha } })
+                          .then(() => setBuild((current) => current && { ...current, bought: true }))
+                          .catch((e) => setSandboxError(e.message))
+                          .finally(() => setBusy(""));
+                      }}
+                    >
+                      {build.bought ? "Bought" : "Buy this build"}
+                    </button>
+                    <button
+                      className="primary small"
+                      disabled={!build.bought || !!busy}
+                      onClick={() => {
+                        setBusy("download");
+                        void fetch(`/api/v1/projects/${id}/build/archive`, { credentials: "include" })
+                          .then(async (response) => {
+                            if (!response.ok) {
+                              const body = await response.json().catch(() => ({}));
+                              throw new Error(body.error || "Download failed");
+                            }
+                            const blob = await response.blob();
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = `colag-${build.sha?.slice(0, 8)}.zip`;
+                            link.click();
+                            URL.revokeObjectURL(url);
+                          })
+                          .catch((e) => setSandboxError(e.message))
+                          .finally(() => setBusy(""));
+                      }}
+                    >
+                      Download project
+                    </button>
+                  </div>
+                  {sandboxError && <p className="inline-error">{sandboxError}</p>}
+                  {build.streamUrl ? (
+                    <SandboxTerminal streamUrl={build.streamUrl} />
+                  ) : sandboxError ? null : (
+                    <div className="loading">Starting the Linux sandbox…</div>
+                  )}
+                </>
+              )}
+              {sandboxError && !build?.sha && <p className="inline-error">{sandboxError}</p>}
             </div>
           )}
           {tab === "artifacts" && (

@@ -34,7 +34,8 @@ export type Kind =
   | "run"
   | "delegation"
   | "lock"
-  | "a2a";
+  | "a2a"
+  | "purchase";
 export interface Entity {
   id: string;
   projectId: string;

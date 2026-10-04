@@ -12,6 +12,8 @@ import { preflight } from "../../../packages/runtime/src/claude.ts";
 import { collaboration } from "./documents.ts";
 import { startA2A } from "../../../packages/adapters/src/a2a.ts";
 import { handleMcp } from "./mcp-http.ts";
+import * as sandbox from "./sandbox.ts";
+import { WebSocketServer } from "ws";
 import { mkdir } from "node:fs/promises";
 import { root } from "../../../packages/git/src/index.ts";
 const app = Fastify({
@@ -277,6 +279,64 @@ app.get("/api/v1/projects/:id/changes/:changeId/diff", async (req) => {
   const run = await store.get(change.data.runId);
   return diffFiles(run.id, run.data.baseSha, change.data.sha);
 });
+app.get("/api/v1/projects/:id/build", async (req) => {
+  const actor = await roomActor(req);
+  const current = await sandbox.loadBuild(actor.projectId);
+  if (!current)
+    return { sha: null, ref: null, running: false, bought: false };
+  return {
+    sha: current.sha,
+    ref: current.ref,
+    running: current.running,
+    bought: await sandbox.hasPurchase(actor.projectId, actor.id, current.sha),
+  };
+});
+app.post("/api/v1/projects/:id/sandbox", async (req) => {
+  const actor = await roomActor(req);
+  assert(actor.type === "human", "Only a member can open the sandbox", "forbidden", 403);
+  const current = await sandbox.loadBuild(actor.projectId);
+  assert(current, "Nothing has been built", "not_found", 404);
+  await sandbox.ensure(actor.projectId, current.runId, current.sha);
+  const ticket = sandbox.issueTicket(actor.projectId, actor.id);
+  return {
+    sha: current.sha,
+    ref: current.ref,
+    running: true,
+    bought: await sandbox.hasPurchase(actor.projectId, actor.id, current.sha),
+    streamUrl: sandbox.streamUrl(actor.projectId, ticket),
+  };
+});
+app.delete("/api/v1/projects/:id/sandbox", async (req, reply) => {
+  const actor = await roomActor(req);
+  assert(actor.type === "human", "Only a member can stop the sandbox", "forbidden", 403);
+  await sandbox.destroy(actor.projectId);
+  reply.status(204).send();
+});
+app.post("/api/v1/projects/:id/build/buy", async (req) => {
+  const actor = await roomActor(req);
+  const sha = (req.body as { sha?: string } | undefined)?.sha;
+  assert(typeof sha === "string" && sha.length > 0, "Build sha required");
+  const record = await sandbox.buy(actor, sha);
+  return { sha: record.data.sha, bought: true };
+});
+app.get("/api/v1/projects/:id/build/archive", async (req, reply) => {
+  const actor = await roomActor(req);
+  assert(actor.type === "human", "Only a member can download a build", "forbidden", 403);
+  const current = await sandbox.loadBuild(actor.projectId);
+  assert(current, "Nothing has been built", "not_found", 404);
+  assert(
+    await sandbox.hasPurchase(actor.projectId, actor.id, current.sha),
+    "Buy this build before downloading it",
+    "not_purchased",
+    409,
+  );
+  reply.header("Content-Type", "application/zip");
+  reply.header(
+    "Content-Disposition",
+    `attachment; filename="colag-${current.sha.slice(0, 8)}.zip"`,
+  );
+  return reply.send(sandbox.zipStream(current.runId, current.sha));
+});
 app.get("/api/v1/projects/:id/artifacts/:artifactId", async (req) => {
   const a = await roomActor(req);
   authorize(a, a.projectId, "project.read");
@@ -307,6 +367,36 @@ app.route({
 });
 const port = Number(process.env.COLAG_PORT || 4310);
 await app.listen({ host: bindHost, port });
+const sockets = new WebSocketServer({ noServer: true });
+app.server.on("upgrade", (request, socket, head) => {
+  const url = new URL(request.url || "/", "http://localhost");
+  const match = url.pathname.match(
+    /^\/api\/v1\/projects\/([^/]+)\/sandbox\/stream$/,
+  );
+  if (!match) {
+    socket.destroy();
+    return;
+  }
+  const requestOrigin = request.headers.origin;
+  if (requestOrigin && !allowedOrigins.includes(requestOrigin)) {
+    socket.destroy();
+    return;
+  }
+  const session = sandbox.takeTicket(url.searchParams.get("ticket") || "");
+  if (!session || session.projectId !== decodeURIComponent(match[1])) {
+    socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  sockets.handleUpgrade(request, socket, head, (ws) => {
+    try {
+      sandbox.attach(session.projectId, ws);
+    } catch (error: any) {
+      ws.send(error.message || "The sandbox is not running");
+      ws.close();
+    }
+  });
+});
 console.log(`Colag service listening on ${bindHost}:${port}`);
 async function boot() {
   try {
@@ -315,6 +405,7 @@ async function boot() {
     await collaboration.listen();
     await startA2A();
     await engine.recover();
+    await sandbox.reap();
     ready = true;
     setInterval(
       () => void store.expireLeases().catch((e) => app.log.error(e)),
@@ -328,8 +419,9 @@ async function boot() {
 }
 void boot();
 process.on("SIGTERM", () => {
-  void engine
-    .shutdown()
+  void sandbox
+    .stopAll()
+    .finally(() => engine.shutdown())
     .finally(() => app.close())
     .finally(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
