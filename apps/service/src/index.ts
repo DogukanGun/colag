@@ -8,7 +8,7 @@ import * as store from "./store.ts";
 import * as engine from "./engine.ts";
 import * as identity from "./identity.ts";
 import { diffFiles } from "../../../packages/git/src/index.ts";
-import { preflight } from "../../../packages/runtime/src/claude.ts";
+import { preflight } from "../../../packages/runtime/src/index.ts";
 import { collaboration } from "./documents.ts";
 import { startA2A } from "../../../packages/adapters/src/a2a.ts";
 import { handleMcp } from "./mcp-http.ts";

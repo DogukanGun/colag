@@ -2,34 +2,41 @@ import { spawn } from "node:child_process";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { root, command } from "../../git/src/index.ts";
-export async function preflight(options: { sandbox?: boolean } = {}) {
-  const checks: Record<string, { ok: boolean; detail: string }> = {};
-  for (const [name, bin, args] of [
-    ["docker", "docker", ["info", "--format", "{{.ServerVersion}}"]],
-    [
-      "claude",
+import type { AgentRequest } from "./types.ts";
+export type { AgentRequest, ClaudeRequest } from "./types.ts";
+type Check = { ok: boolean; detail: string };
+/** Claude Code must be installed and signed in on the host. */
+export async function preflightClaude(): Promise<Check> {
+  try {
+    await command(
       process.env.CLAUDE_BIN || "claude",
       ["auth", "status", "--text"],
-    ],
-  ] as [string, string, string[]][]) {
-    try {
-      const out = await command(bin, args, undefined, 10000);
-      checks[name] = {
-        ok: true,
-        detail:
-          name === "claude"
-            ? "Claude authentication available"
-            : `Docker ${out.trim()}`,
-      };
-    } catch (e: any) {
-      checks[name] = {
-        ok: false,
-        detail:
-          name === "docker"
-            ? "Start Docker Desktop and wait for the engine."
-            : "Run claude auth login in your terminal.",
-      };
-    }
+      undefined,
+      10000,
+    );
+    return { ok: true, detail: "Claude authentication available" };
+  } catch {
+    return { ok: false, detail: "Run claude auth login in your terminal." };
+  }
+}
+/** Docker, and optionally a real network-isolated container start. */
+export async function preflightSandbox(
+  options: { sandbox?: boolean } = {},
+): Promise<Record<string, Check>> {
+  const checks: Record<string, Check> = {};
+  try {
+    const out = await command(
+      "docker",
+      ["info", "--format", "{{.ServerVersion}}"],
+      undefined,
+      10000,
+    );
+    checks.docker = { ok: true, detail: `Docker ${out.trim()}` };
+  } catch {
+    checks.docker = {
+      ok: false,
+      detail: "Start Docker Desktop and wait for the engine.",
+    };
   }
   if (options.sandbox && checks.docker?.ok) {
     const { runProcess } = await import("./process.ts");
@@ -83,15 +90,12 @@ export async function preflight(options: { sandbox?: boolean } = {}) {
   }
   return checks;
 }
-export interface ClaudeRequest {
-  sessionId: string;
-  prompt: string;
-  token: string;
-  signal: AbortSignal;
-  schema?: object;
-  onOutput?: (line: any) => void;
+/** @deprecated Use preflight from ./index.ts, which honors COLAG_MODEL_PROVIDER. */
+export async function preflight(options: { sandbox?: boolean } = {}) {
+  const checks = await preflightSandbox(options);
+  return { ...checks, claude: await preflightClaude() };
 }
-export async function runClaude(r: ClaudeRequest): Promise<any> {
+export async function runClaude(r: AgentRequest): Promise<any> {
   const dir = path.join(root, "sessions", r.sessionId);
   await mkdir(dir, { recursive: true });
   const config = path.join(dir, "mcp.json");

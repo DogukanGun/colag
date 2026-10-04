@@ -108,7 +108,7 @@ Step-by-step rules, including which token opens what, are in [User flows](docs/p
 
 ## Start
 
-Requires Node 22+, pnpm, Git, Docker, and an authenticated Claude Code installation when you want the local agent runtime.
+Requires Node 22+, pnpm, Git, Docker, and one model provider for the hosted agents: an authenticated Claude Code installation, or any OpenAI-compatible endpoint such as Nebius Token Factory. See [Model providers](#model-providers).
 
 ```sh
 pnpm install
@@ -118,6 +118,24 @@ docker pull node:22-alpine
 claude auth status
 pnpm dev
 ```
+
+### Model providers
+
+Hosted Colag agents run on the provider named in `COLAG_MODEL_PROVIDER`. Everything above the model is the same on both paths: the plan, claimed tasks, worktrees, the sandboxed tests, and the human approve-and-merge gate.
+
+| Provider | What runs | Configure |
+| --- | --- | --- |
+| `claude` (default) | The Claude Code CLI on this host, with built-in tools disabled and only Colag's MCP tools. | `claude auth login`, optional `CLAUDE_BIN` |
+| `openai` | A tool-calling loop against any OpenAI-compatible chat endpoint. Tested with Nebius Token Factory serving NVIDIA Nemotron; works with a vLLM server on AMD Developer Cloud or a local server. | `COLAG_MODEL_BASE_URL`, `COLAG_MODEL_API_KEY`, `COLAG_MODEL_NAME` |
+
+```sh
+COLAG_MODEL_PROVIDER=openai
+COLAG_MODEL_BASE_URL=https://api.tokenfactory.nebius.com/v1
+COLAG_MODEL_API_KEY=...
+COLAG_MODEL_NAME=nvidia/nemotron-3-super-120b-a12b
+```
+
+On the `openai` path the model only sees Colag's tool catalog, and each tool call goes through the same authorized HTTP tool endpoint the MCP bridge uses. Token usage per run is reported in the agent's result event. `GET /api/v1/health` reports the active provider under the `model` check.
 
 Open the web app and sign in with your email. In development the sign-in response includes the one-time code. Migrations run at service startup. The service binds to `COLAG_HOST` (loopback unless you set it) and the browser origin comes from `COLAG_PUBLIC_ORIGIN`.
 
@@ -171,10 +189,10 @@ pnpm build
 DATABASE_URL=postgres://127.0.0.1:5432/colag_test COLAG_DATABASE_TESTS=1 pnpm test
 COLAG_TEST_DATABASE_URL=postgres://127.0.0.1:5432/colag_test pnpm test:integration
 pnpm test:browser
-pnpm test:claude
+pnpm test:model
 ```
 
-Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The Claude smoke check uses your authenticated account and only reads the project.
+Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The model smoke check runs one hosted agent against the configured provider and only reads the project.
 
 A complete live acceptance run uses the normal UI and Docker. Approval gates stay human actions. The framework does not approve its own plan or merge on your behalf.
 

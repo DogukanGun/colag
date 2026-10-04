@@ -17,14 +17,14 @@ import type {
 } from "../../../packages/protocol/src/index.ts";
 import * as store from "./store.ts";
 import * as git from "../../../packages/git/src/index.ts";
-import { preflight, runClaude } from "../../../packages/runtime/src/claude.ts";
+import { preflight, runAgent } from "../../../packages/runtime/src/index.ts";
 import {
   AGENT_DOCUMENT_APPEND,
   readDocument,
   writeDocument,
 } from "./documents.ts";
 // Dependency injection is available only to the isolated test process.
-const runtime = { preflight, runClaude, testSandbox: git.testSandbox };
+const runtime = { preflight, runAgent, testSandbox: git.testSandbox };
 export function configureTestRuntime(overrides: Partial<typeof runtime>) {
   assert(
     process.env.NODE_ENV === "test",
@@ -352,7 +352,7 @@ async function invoke(
     10000,
   );
   try {
-    return await runtime.runClaude({
+    return await runtime.runAgent({
       sessionId: randomUUID(),
       prompt: `You are ${agent.data.name}, the ${agent.data.role} agent in Colag. Use only Colag MCP tools. Work within assigned task scope. Do not alter tests or package dependencies. Record significant decisions with create_decision. Publish concrete artifacts. The sample is disposable.\n${prompt}`,
       token,

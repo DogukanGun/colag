@@ -24,13 +24,13 @@ const calls: string[] = [];
 engine.configureTestRuntime({
   preflight: async () => ({
     docker: { ok: true, detail: "Deterministic test runner" },
-    claude: { ok: true, detail: "Deterministic agent fixture" },
+    model: { ok: true, detail: "Deterministic agent fixture" },
   }),
   testSandbox: async () => ({
     passed: true,
     output: "Deterministic integration fixture: test runner passed.",
   }),
-  runClaude: async (r) => {
+  runAgent: async (r) => {
     const actor = await store.authenticate(r.token);
     calls.push(actor.id);
     const role = (await store.resources(actor.projectId)).find(

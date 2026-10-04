@@ -1,13 +1,13 @@
 # Architecture
 
-Colag is a modular monolith: a Next.js client, a Fastify collaboration service, and a supervised Claude Code runtime. PostgreSQL owns users, sessions, room memberships, structured resources, and the transactional event log. Redis owns transient presence and leases. Hocuspocus persists Yjs documents in PostgreSQL. Git owns source code. The browser never controls domain transitions directly.
+Colag is a modular monolith: a Next.js client, a Fastify collaboration service, and a supervised agent runtime with two interchangeable model providers: the Claude Code CLI, or any OpenAI-compatible chat endpoint such as Nebius Token Factory or a vLLM server. PostgreSQL owns users, sessions, room memberships, structured resources, and the transactional event log. Redis owns transient presence and leases. Hocuspocus persists Yjs documents in PostgreSQL. Git owns source code. The browser never controls domain transitions directly.
 
 ```mermaid
 flowchart LR
   browser[Browser]
   client[Coding client]
   service[Collaboration service]
-  claude[Claude runtime]
+  claude[Agent runtime]
   postgres[PostgreSQL]
   redis[Redis]
   yjs[Yjs document]
@@ -16,7 +16,7 @@ flowchart LR
   browser --> service
   client -->|MCP| service
   service --> claude
-  claude -->|stdio MCP| service
+  claude -->|stdio MCP or HTTP tools| service
   service --> postgres
   service --> redis
   service --> yjs
@@ -28,7 +28,7 @@ People sign in with an email code. The browser session is an HttpOnly cookie, no
 
 The protocol and domain packages contain no UI, ORM, A2A, or MCP imports. REST, MCP, and A2A adapters call the same authorized command service. Hosted agents still use a per-run bearer in `credentials`, bound to one room and one run. External coding clients use a revocable bearer stored only as a hash on `mcp_connections`. That Streamable HTTP MCP exposes the collaboration tools and does not include plan approval or merge. A session cookie cannot authenticate MCP, and an agent token cannot open the UI.
 
-The service binds to `COLAG_HOST` (loopback by default). Browser CORS uses `COLAG_PUBLIC_ORIGIN`. Unauthenticated requests fail. Claude runs on the host for existing authentication, with built-in tools disabled, project configuration discovery disabled, and only explicitly provided MCP tools. Hosted agents keep the stdio MCP bridge. MCP mediates reads and writes within an assigned worktree, rejecting traversal, symlinks, and Git metadata. Git commands are service-owned. Generated code runs only in Docker, without network, host secrets, or the Docker socket. The Docker daemon is trusted infrastructure, not mounted into a worker.
+The service binds to `COLAG_HOST` (loopback by default). Browser CORS uses `COLAG_PUBLIC_ORIGIN`. Unauthenticated requests fail. The runtime package exposes `runAgent` and `preflight`; `COLAG_MODEL_PROVIDER` selects the provider. With `claude`, Claude Code runs on the host for existing authentication, with built-in tools disabled, project configuration discovery disabled, and only explicitly provided MCP tools through the stdio MCP bridge. With `openai`, the runtime drives a chat-completions tool loop: the catalog's zod schemas become tool definitions, each tool call posts to the service's authorized tool endpoint with the agent's per-run bearer, tool errors are returned to the model, and structured outputs are parsed from the final message with one schema-constrained formatting pass as a fallback. Both providers emit the same output line shapes, so the engine, event log, and UI do not know which model is active. MCP mediates reads and writes within an assigned worktree, rejecting traversal, symlinks, and Git metadata. Git commands are service-owned. Generated code runs only in Docker, without network, host secrets, or the Docker socket. The Docker daemon is trusted infrastructure, not mounted into a worker.
 
 Coding tasks use distinct branches and worktrees. The service assembles their commits onto an integration branch, tests the exact candidate, and requests independent QA review. Human merge requires matching candidate, test, and review SHAs and an unchanged target HEAD. Conflicts are recorded and routed to a repair task. No remote push exists. `agent.prompt` runs one hosted agent; it can draft a plan or work one task, and it cannot approve or merge. `board.submit` asks Atlas to append a stranger-readable analysis of the shared design board. That write appends. A model failure is stored on a blocked run and is not replaced with a made-up analysis.
 
