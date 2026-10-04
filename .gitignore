@@ -4,6 +4,7 @@ node_modules/
 .colag/
 playwright-report/
 test-results/
+demos/sales/out/
 *.tsbuildinfo
 .next-dev/
 apps/web/public/monaco/

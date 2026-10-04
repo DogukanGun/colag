@@ -1,133 +1,122 @@
-# Colag
+<p align="center">
+  <strong>People and agents · one shared plan</strong>
+</p>
 
-Colag is a room where people and agents write and build together. You sign in as yourself, open a room, and pick how to work: bring your own coding client, command an agent Colag hosts, or design an app on one shared board. Plans stay in a live document several people can edit at once. Code stays on isolated branches until a member approves the plan and merges a tested commit.
+<h1 align="center">The whole room.<br>One Colag.</h1>
 
-## Features
+<p align="center">
+  A room where the people and the coding client build the same product.<br>
+  The plan, the board, and the coder stay in one place.
+</p>
 
-- **Accounts.** Email and a one-time code. The first code creates the user. The browser session is an HttpOnly cookie, separate from agent and MCP tokens.
-- **Rooms.** You own the rooms you create. Other people join only by invite. A member of one room cannot open another.
-- **Shared plan.** One Tiptap document per room, synced live with Yjs. Agents append sections and do not replace what someone else is typing.
-- **Bring your agent.** Cursor or Claude Code joins the room over Streamable HTTP MCP. The token is shown once and can be revoked. The client can work the plan, tasks, and claimed files. It cannot approve or merge.
-- **Hosted agents.** Atlas, Ada, Forge, Pixel, and Sentinel run on the server with the server’s Claude login. You pick one and send a command. The room log is the transcript.
-- **Make an app together.** The same shared document is a design board: notes, algorithms, Mermaid diagrams, and small drawings. Submit asks Atlas to append an analysis, a page map, process algorithms, and a BPMN-style diagram per feature.
-- **Reviewed changes.** Coding work uses a branch and worktree per task. Tests run in a network-isolated container. A member approves the plan and merges. There is no remote push.
+<p align="center">
+  <a href="https://colag-eight.vercel.app"><strong>Open Colag</strong></a>
+  &nbsp;·&nbsp;
+  <a href="docs/demo/colag-sales-demo.mp4"><strong>Play the demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="docs/product-flows.md">User flows</a>
+</p>
 
-Step-by-step rules, including which token opens what, are in [User flows](docs/product-flows.md).
+<p align="center">
+  <a href="docs/demo/colag-sales-demo.mp4">
+    <img src="docs/demo/poster.png" alt="Colag design board: a ride-matching flowchart and a shared sketch, with Cursor named as the coder" width="920">
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/demo/colag-sales-demo.mp4">Two minutes. Click the picture.</a>
+</p>
+
+The demo is the product, not a mock. A person signs in, connects Cursor as the coder, and the room stays closed until that client is in. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing.
+
+## What you can do
+
+| | Today | |
+| --- | --- | --- |
+| **Bring your agent** | Cursor or Claude Code joins over Colag’s own MCP and is the coder for the room. | Live |
+| **Make an app together** | One board for requirements, algorithms, Mermaid diagrams, and drawings. Everyone in the room writes the same document. | Live |
+| **Use a Colag agent** | Atlas, Ada, Forge, Pixel, and Sentinel stay on the page. They are not a way to start a room yet. | Coming soon |
+
+A member still approves and merges. The connected client cannot.
 
 ```mermaid
 flowchart LR
-  user[Signed-in user]
+  user[Signed-in person]
+  gate[Who builds this?]
+  client[Cursor or Claude Code]
   room[Room]
   plan[Shared plan]
-  client[Your coding client]
-  agents[Hosted agents]
   board[Design board]
   review[Approve and merge]
 
-  user --> room
+  user --> gate
+  gate --> client
+  client -->|MCP| room
   room --> plan
-  client -->|MCP| plan
-  agents -->|command| plan
-  board --- plan
+  room --> board
   plan --> review
+  board --> review
 ```
 
-## Ways in
+## The room stays closed until the coder is in
 
-Sign in, then choose one of these on the home screen. Each choice creates a room. Rooms you already belong to are listed underneath.
+Creating a room asks who builds it. The working answer is your own client. A Colag agent is shown, labeled coming soon, and cannot be chosen.
 
-```mermaid
-flowchart TD
-  email[Email and one-time code]
-  home[Home]
-  bring[Bring your agent]
-  hosted[Use a Colag agent]
-  design[Make an app together]
-  room[Room]
-  invite[Invite link]
-
-  email --> home
-  home --> bring
-  home --> hosted
-  home --> design
-  bring --> room
-  hosted --> room
-  design --> room
-  invite --> room
-```
-
-### Bring your agent
-
-1. Name the client, such as Cursor or Claude Code.
-2. Copy the MCP URL, the token, and the config snippet. The token is shown once.
-3. Connect the client. It appears in the room while it is live.
-4. Write the plan together. Code goes through a claimed task, then a member reviews the diff.
-5. Revoke the connection when that client should stop.
+1. Name the client. Cursor or Claude Code.
+2. Copy the setup. The token is shown once, off to the side of the room.
+3. Enter the room only after that connection exists.
+4. The coder is named in the room. Replace them with another client. The coder is not revoked out from under the work.
+5. Write the plan together. Code goes through a claimed task. A member reviews the diff and merges. The client cannot.
 
 ```mermaid
 sequenceDiagram
   participant Member
   participant Room
-  participant Client as Coding client
-  Member->>Room: Name the client
-  Room-->>Member: MCP URL and token, shown once
-  Client->>Room: Connect over MCP
-  Room-->>Member: Client shows as live
+  participant Client as Cursor or Claude Code
+  Member->>Room: Who builds this?
+  Room-->>Member: The room stays closed
+  Member->>Room: Connect the client
+  Room-->>Member: Coder is named
   Client->>Room: Plan, tasks, and claimed files
-  Member->>Room: Approve and merge
-  Note over Client,Room: The client cannot approve or merge
+  Member->>Room: Replace the coder, or approve and merge
+  Note over Client,Room: The client cannot approve, merge, or be revoked
 ```
 
-### Use a Colag agent
+Public MCP for the live product: `https://colag.2-28-123-220.sslip.io/mcp`
 
-1. Pick one hosted agent.
-2. Send a command. Atlas can draft the shared plan. A specialist works one ready task in its own worktree.
-3. Watch the room log. Stop leaves the run blocked or stopped. A failure is never marked complete.
-4. Approve the plan, inspect **Changes**, then merge the tested commit. Only that room’s disposable `main` changes.
+## One board, the same picture for everyone
 
-```mermaid
-sequenceDiagram
-  participant Member
-  participant Room
-  participant Agent as Hosted agent
-  Member->>Room: Pick one agent and send a command
-  Room->>Agent: Run on the server
-  Agent->>Room: Draft the plan or work one task
-  Member->>Room: Approve the plan
-  Member->>Room: Merge the tested commit
-  Note over Agent,Room: A failure stays failed
-```
+**Make an app together** opens a design board on the same live document. Requirements, an algorithm, a diagram, and a drawing are blocks in that document. Yjs keeps them in sync. What one person writes is what the next person sees, including the sketch.
 
-### Make an app together
-
-1. Open the board and write the product with the other people in the room. Add requirements, an algorithm, or a diagram.
-2. Choose **Submit board**.
-3. Atlas appends a general analysis, a page map, process algorithms, and one BPMN-style diagram per feature.
-4. Keep editing the same document. The append does not wipe notes someone else is still writing.
-
-If Claude cannot run, the submit is blocked and the error is the real one. Colag does not invent an analysis.
+Submitting the board to a hosted agent for an analysis, a page map, and a BPMN diagram per feature waits with the hosted agents. The board itself is the place the product gets drawn.
 
 ```mermaid
 flowchart TD
-  people[Several people edit one board]
-  submit[Submit board]
-  atlas[Atlas reads the board]
-  analysis[General analysis]
-  pages[Page map]
-  steps[Process algorithms]
-  bpmn[BPMN diagram per feature]
-  same[Same board, still editable]
+  people[People in the room]
+  req[Requirements]
+  algo[Algorithm]
+  diagram[Diagram]
+  sketch[Drawing]
+  same[Same document for everyone]
 
-  people --> submit --> atlas
-  atlas --> analysis --> same
-  atlas --> pages --> same
-  atlas --> steps --> same
-  atlas --> bpmn --> same
+  people --> req --> same
+  people --> algo --> same
+  people --> diagram --> same
+  people --> sketch --> same
 ```
+
+## Accounts, rooms, review
+
+- **You sign in as yourself.** Email and a one-time code. The first code creates the user. The browser session is an HttpOnly cookie, separate from the agent token and the MCP token.
+- **A room is a project.** You own the rooms you create. Other people join by invite. A member of one room cannot open another.
+- **The plan is shared.** One Tiptap document per room. Agents append. They do not replace a sentence someone else is still typing.
+- **Reviewed changes.** Coding work uses a branch and a worktree per task. Tests run in a network-isolated container. A member approves the plan and merges a tested commit. There is no remote push. A failure is never marked complete.
+
+Step-by-step rules, including which token opens what, are in [User flows](docs/product-flows.md).
 
 ## Start
 
-Requires Node 22+, pnpm, Git, Docker Desktop, and an authenticated Claude Code installation.
+Requires Node 22+, pnpm, Git, Docker, and an authenticated Claude Code installation when you want the local agent runtime.
 
 ```sh
 pnpm install
@@ -140,11 +129,13 @@ pnpm dev
 
 Open the web app and sign in with your email. In development the sign-in response includes the one-time code. Migrations run at service startup. The service binds to `COLAG_HOST` (loopback unless you set it) and the browser origin comes from `COLAG_PUBLIC_ORIGIN`.
 
-Ports: UI 3000, API 4310, Yjs 4311, A2A 4312, optional A2A fixture 4320. PostgreSQL and Redis defaults are 54329 and 63799. You can use existing local PostgreSQL/Redis servers by setting `.env`; use a dedicated database. Service startup errors appear in the page. Generated code never falls back to host execution when Docker is unavailable.
+Ports: UI 3000, API 4310, Yjs 4311, A2A 4312, optional A2A fixture 4320. PostgreSQL and Redis defaults are 54329 and 63799. You can point `.env` at existing local servers; use a dedicated database. Generated code never falls back to host execution when Docker is unavailable.
+
+The live app is [colag-eight.vercel.app](https://colag-eight.vercel.app). It talks to the hosted API. Production does not print login codes. Codes are emailed when mail is configured.
 
 ## Sample build
 
-A room can still run the disposable authentication sample. The sample has a fixed Node HTTP adapter and React entrypoint. Agents implement the authentication module and forms. It is a demonstration, not production authentication.
+A room can still run the disposable authentication sample when an agent runtime is available. The sample has a fixed Node HTTP adapter and a React entrypoint. Agents implement the authentication module and forms. It is a demonstration, not production authentication.
 
 1. Describe the change and start the run.
 2. Review the shared plan and tasks, then choose **Approve plan**.
@@ -164,20 +155,20 @@ Run state, decisions, events, artifacts, and document updates persist. Interrupt
 - [API](docs/api.md)
 - [Public TypeScript contracts](packages/protocol/src/index.ts)
 
-All mutations use project-scoped identities and idempotency keys. PostgreSQL transactions arbitrate claims and persist events. Redis holds expiring presence and lease caches; durable ownership does not depend on Redis being available. Shared documents use Tiptap/Yjs/Hocuspocus. Agents append sections rather than replacing concurrent human edits.
+All mutations use project-scoped identities and idempotency keys. PostgreSQL transactions arbitrate claims and persist events. Redis holds expiring presence and lease caches; durable ownership does not depend on Redis being available. Shared documents use Tiptap, Yjs, and Hocuspocus.
 
-Claude's native tools are disabled. The explicit MCP server exposes project tools and service-mediated workspace operations. Test containers have read-only workspace mounts, no network, no host credentials, CPU/memory limits, and no Docker socket. Agent tokens are revoked at session end. Only a member of the room can approve the plan or merge. A connected coding client cannot.
+Claude's native tools are disabled. The explicit MCP server exposes project tools and service-mediated workspace operations. Test containers have read-only workspace mounts, no network, no host credentials, CPU and memory limits, and no Docker socket. Agent tokens are revoked at session end. Only a member of the room can approve the plan or merge.
 
 ### A2A
 
-The official `@a2a-js/sdk` 1.2.1 provides A2A v1 JSON-RPC. Discover at `http://127.0.0.1:4312/.well-known/agent-card.json`. Obtain an external bearer token using authenticated `POST /api/v1/external-token`. Supply it as an Authorization header to the SDK client. Incoming messages create runs that still require human approval; task IDs map durably to runs. Polling and cancellation use the same run state. Artifact contents are returned in A2A tasks.
+The official `@a2a-js/sdk` 1.2.1 provides A2A v1 JSON-RPC. Discover at `http://127.0.0.1:4312/.well-known/agent-card.json`. Obtain an external bearer token with authenticated `POST /api/v1/external-token`. Supply it as an Authorization header to the SDK client. Incoming messages create runs that still require human approval; task IDs map durably to runs. Polling and cancellation use the same run state. Artifact contents are returned in A2A tasks.
 
 ```sh
 pnpm demo:a2a
 pnpm exec tsx scripts/check-a2a.ts
 ```
 
-The separate local A2A fixture returns a deterministic checklist and is explicitly not an AI reviewer. Real agents can invoke `delegate_external` through MCP against `COLAG_A2A_ENDPOINT`; configure `COLAG_A2A_TOKEN` when needed. It cannot approve or merge local code.
+The separate local A2A fixture returns a deterministic checklist and is explicitly not an AI reviewer. Real agents can invoke `delegate_external` through MCP against `COLAG_A2A_ENDPOINT`. Configure `COLAG_A2A_TOKEN` when needed. It cannot approve or merge local code.
 
 ## Verify
 
@@ -191,12 +182,12 @@ pnpm test:browser
 pnpm test:claude
 ```
 
-Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees and the A2A SDK, but injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running; they verify two-session document synchronization and responsive widths. The Claude smoke check uses your real authenticated account and only reads the project.
+Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The Claude smoke check uses your authenticated account and only reads the project.
 
-A complete live acceptance run uses the normal UI and Docker. Approval gates intentionally remain human actions. The framework does not approve its own generated plan or merge on your behalf.
+A complete live acceptance run uses the normal UI and Docker. Approval gates stay human actions. The framework does not approve its own plan or merge on your behalf.
 
-## Current boundaries
+## Boundaries
 
-Accounts, invites, and rooms are in. Each room is one disposable repository and one shared document. One independent QA review. External A2A endpoints are explicit. Hosted agents use the server’s Claude login, not a key per user.
+Accounts, invites, and rooms are in. Each room is one disposable repository and one shared document. The coder is a connected client, and the room does not open without one. Hosted Colag agents are visible and marked coming soon. One independent QA review. External A2A endpoints are explicit.
 
-Not in this repo yet: billing, importing someone’s existing repository, a marketplace of third-party MCP servers, remote push, production deployment, or Kubernetes.
+Not in this product: billing, importing an existing repository, a marketplace of third-party MCP servers, a model key per user, remote push, or Kubernetes.

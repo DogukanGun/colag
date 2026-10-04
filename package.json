@@ -16,7 +16,8 @@
     "test:claude": "tsx scripts/smoke-claude.ts",
     "infra:up": "docker compose -f infrastructure/compose.yaml up -d",
     "infra:down": "docker compose -f infrastructure/compose.yaml down",
-    "test:live": "tsx scripts/test-live.ts"
+    "test:live": "tsx scripts/test-live.ts",
+    "demo:sales": "tsx scripts/sales-demo.ts"
   },
   "dependencies": {
     "@a2a-js/sdk": "1.2.1",
