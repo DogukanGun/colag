@@ -12,20 +12,12 @@
 <p align="center">
   <a href="https://colag-eight.vercel.app"><strong>Open Colag</strong></a>
   &nbsp;·&nbsp;
-  <a href="docs/demo/colag-sales-demo.mp4"><strong>Play the demo</strong></a>
-  &nbsp;·&nbsp;
-  <a href="docs/product-flows.md">User flows</a>
+  <a href="https://github.com/DogukanGun/colag/blob/main/docs/product-flows.md">User flows</a>
 </p>
 
-<p align="center">
-  <a href="docs/demo/colag-sales-demo.mp4">
-    <img src="docs/demo/poster.png" alt="Colag design board: a ride-matching flowchart and a shared sketch, with Cursor named as the coder" width="920">
-  </a>
-</p>
+https://github.com/user-attachments/assets/bbaf70d9-da41-4a24-8845-f372a8509a44
 
-<p align="center">
-  <a href="docs/demo/colag-sales-demo.mp4">Two minutes. Click the picture.</a>
-</p>
+<p align="center">Two minutes, with sound. Unmute to hear it.</p>
 
 The demo is the product, not a mock. A person signs in, connects Cursor as the coder, and the room stays closed until that client is in. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing.
 
