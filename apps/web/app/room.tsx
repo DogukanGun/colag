@@ -17,6 +17,7 @@ import {
   Link2,
   RefreshCw,
   Square,
+  MessageSquare,
   Terminal,
   Users,
   X,
@@ -101,6 +102,7 @@ export default function Room({ id }: { id: string }) {
     streamUrl?: string;
   } | null>(null);
   const [sandboxError, setSandboxError] = useState("");
+  const [deskMessage, setDeskMessage] = useState("How many days does a customer have to return a lamp?");
   const panelRef = useRef<HTMLElement>(null);
   const load = useCallback(async () => {
     const data = await api(`/projects/${id}`);
@@ -201,6 +203,7 @@ export default function Room({ id }: { id: string }) {
   const artifacts = resources.filter(
     (x) => x.kind === "artifact" && x.data.runId === run?.id,
   );
+  const replies = resources.filter((x) => x.kind === "reply");
   const reviews = resources.filter(
     (x) => x.kind === "review" && x.data.runId === run?.id,
   );
@@ -412,6 +415,9 @@ export default function Room({ id }: { id: string }) {
             <button className={tab === "build" ? "active" : ""} onClick={() => setTab("build")}>
               <Terminal size={16} /> Build
             </button>
+            <button className={tab === "desk" ? "active" : ""} onClick={() => setTab("desk")}>
+              <MessageSquare size={16} /> Desk
+            </button>
           </div>
           {run && (
             <div
@@ -622,6 +628,86 @@ export default function Room({ id }: { id: string }) {
                 </>
               )}
               {sandboxError && !build?.sha && <p className="inline-error">{sandboxError}</p>}
+            </div>
+          )}
+          {tab === "desk" && (
+            <div className="build-view">
+              <form
+                className="build-bar"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setBusy("desk");
+                  setSandboxError("");
+                  void api(`/projects/${id}/desk`, { body: { message: deskMessage } })
+                    .then(() => load())
+                    .catch((e) => setSandboxError(e.message))
+                    .finally(() => setBusy(""));
+                }}
+              >
+                <input
+                  value={deskMessage}
+                  onChange={(event) => setDeskMessage(event.target.value)}
+                  aria-label="Customer message"
+                />
+                <button className="primary small" disabled={!!busy || !deskMessage.trim()}>
+                  Draft reply
+                </button>
+              </form>
+              {sandboxError && tab === "desk" && <p className="inline-error">{sandboxError}</p>}
+              {replies.length ? (
+                replies.map((reply) => (
+                  <article key={reply.id} className="desk-reply">
+                    <strong>{reply.data.message}</strong>
+                    <p>
+                      {reply.data.answer
+                        ? reply.data.answer
+                        : "The documents do not say. Nothing was drafted."}
+                    </p>
+                    <small>
+                      {reply.data.citations?.length
+                        ? reply.data.citations.join(", ")
+                        : "No source"}
+                      {" · "}
+                      {reply.data.status}
+                    </small>
+                    {reply.data.status === "pending" && (
+                      <div className="build-bar">
+                        <button
+                          className="primary small"
+                          disabled={!!busy}
+                          onClick={() => {
+                            setBusy("approve");
+                            void api(`/projects/${id}/desk/${reply.id}/approve`, { body: {} })
+                              .then(() => load())
+                              .catch((e) => setSandboxError(e.message))
+                              .finally(() => setBusy(""));
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="secondary small"
+                          disabled={!!busy}
+                          onClick={() => {
+                            setBusy("return");
+                            void api(`/projects/${id}/desk/${reply.id}/return`, { body: {} })
+                              .then(() => load())
+                              .catch((e) => setSandboxError(e.message))
+                              .finally(() => setBusy(""));
+                          }}
+                        >
+                          Send back
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <strong>No customer message yet</strong>
+                  <p>A draft cites the company document it used, or it stays empty. A member sends it.</p>
+                </div>
+              )}
             </div>
           )}
           {tab === "artifacts" && (

@@ -13,6 +13,7 @@ import { collaboration } from "./documents.ts";
 import { startA2A } from "../../../packages/adapters/src/a2a.ts";
 import { handleMcp } from "./mcp-http.ts";
 import * as sandbox from "./sandbox.ts";
+import * as desk from "./desk.ts";
 import { WebSocketServer } from "ws";
 import { mkdir } from "node:fs/promises";
 import { root } from "../../../packages/git/src/index.ts";
@@ -336,6 +337,21 @@ app.get("/api/v1/projects/:id/build/archive", async (req, reply) => {
     `attachment; filename="colag-${current.sha.slice(0, 8)}.zip"`,
   );
   return reply.send(sandbox.zipStream(current.runId, current.sha));
+});
+app.post("/api/v1/projects/:id/desk", async (req) => {
+  const actor = await roomActor(req);
+  const message = (req.body as { message?: string } | undefined)?.message;
+  assert(typeof message === "string", "A customer message is required");
+  const reply = await desk.draftReply(actor, message);
+  return reply;
+});
+app.post("/api/v1/projects/:id/desk/:replyId/approve", async (req) => {
+  const actor = await roomActor(req);
+  return desk.settle(actor, (req.params as { replyId: string }).replyId, "approved");
+});
+app.post("/api/v1/projects/:id/desk/:replyId/return", async (req) => {
+  const actor = await roomActor(req);
+  return desk.settle(actor, (req.params as { replyId: string }).replyId, "returned");
 });
 app.get("/api/v1/projects/:id/artifacts/:artifactId", async (req) => {
   const a = await roomActor(req);
