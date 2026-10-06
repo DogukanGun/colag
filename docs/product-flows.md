@@ -96,6 +96,14 @@ The hosted roster is Atlas, Ada, Forge, Pixel, and Sentinel. A member picks one 
 
 Atlas can draft the shared plan. Approval stays a separate human action in the room. A specialist works one ready task in that task’s worktree. Stop, block, and retry keep their current behavior. A failure is never marked complete. The connected client and the hosted agent both stop short of approve and merge.
 
+## Make a demo video
+
+The coder or a member writes a script for the room's current build: `app.start` (the npm script, plus `app.api.start` for a separate API) and its port, then up to 40 steps. Each step is `goto` (a path inside the app), `click`, `type`, `hover`, `press`, `scroll` or `wait`, with an optional `say` line of at most 40 words. Colag checks the script when it is saved and returns readable errors (`steps.3: click needs a target`). It also checks, before rendering, that the npm scripts exist in that build's `package.json`.
+
+`render_demo_video` (or **Render** in the Demo tab) queues it. The room sees the progress live: the voice, installing, starting the app, filming step 7 of 18, cutting to the voice, mixing. The app runs without network. The recorder sees only the app. A ready demo shows a player and downloads (MP4, GIF, thumbnail, subtitles) and adds a video artifact. A failed one says which step failed and why, with a screenshot; fix that step and render again. Editing a demo puts it back to draft. One render per room at a time, and a daily limit per room.
+
+The coder can create, edit and render demos, but it cannot approve or merge, and it cannot see another room's demos. Files are served only to members of the room.
+
 ## Make an app together
 
 A member chooses this on the home screen. Colag creates a room and opens the shared plan as a design board. Several people edit that one document at the same time: prose, a requirements block, an algorithm, a Mermaid diagram, or a small drawing. The diagram source is the shared text. The same document token that opens the plan opens the board.

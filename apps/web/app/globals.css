@@ -1641,3 +1641,110 @@ p {
   white-space: nowrap;
 }
 .plan-content.board { max-height: min(70vh, 720px); }
+.demo-view {
+  min-height: 0;
+}
+.demo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.demo-video {
+  width: 100%;
+  max-width: 880px;
+  aspect-ratio: 16 / 9;
+  background: #101c22;
+  border-radius: 10px;
+}
+.demo-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.demo-status.ready {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.demo-status.failed {
+  background: #fdecec;
+  color: #b42318;
+}
+.demo-status.queued,
+.demo-status.rendering {
+  background: #eef4ff;
+  color: #2952cc;
+}
+.demo-failed img {
+  max-width: 560px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.demo-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.demo-actions a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.demo-delete {
+  margin-left: auto;
+}
+.demo-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.demo-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 550;
+}
+.demo-editor label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-weight: 450;
+}
+.demo-editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+}
+.demo-editor-row label:first-child {
+  flex: 1;
+  min-width: 220px;
+}
+.demo-editor input:not([type="checkbox"]),
+.demo-editor select,
+.demo-script {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.demo-script {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.demo-editor .muted {
+  color: var(--muted);
+}

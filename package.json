@@ -17,7 +17,9 @@
     "infra:up": "docker compose -f infrastructure/compose.yaml up -d",
     "infra:down": "docker compose -f infrastructure/compose.yaml down",
     "test:live": "tsx scripts/test-live.ts",
-    "demo:sales": "tsx scripts/sales-demo.ts"
+    "demo:sales": "tsx scripts/sales-demo.ts",
+    "demo:image": "docker build -t colag-demo-recorder infrastructure/demo-recorder",
+    "test:demo": "tsx scripts/test-demo.ts"
   },
   "dependencies": {
     "@a2a-js/sdk": "1.2.1",
