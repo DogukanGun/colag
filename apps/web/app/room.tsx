@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Box,
   Film,
   GitBranch,
   Layers,
@@ -34,6 +35,10 @@ const DiffEditor = dynamic(() => import("./code-diff"), {
 const SandboxTerminal = dynamic(() => import("./sandbox-terminal"), {
   ssr: false,
   loading: () => <div className="loading">Opening the sandbox…</div>,
+});
+const LiveView = dynamic(() => import("./live-view"), {
+  ssr: false,
+  loading: () => <div className="loading">Opening the room…</div>,
 });
 type Entity = {
   id: string;
@@ -424,6 +429,9 @@ export default function Room({ id }: { id: string }) {
             <button className={tab === "demo" ? "active" : ""} onClick={() => setTab("demo")}>
               <Film size={16} /> Demo <span className="count">{demos.length}</span>
             </button>
+            <button className={tab === "live" ? "active" : ""} onClick={() => setTab("live")}>
+              <Box size={16} /> Live
+            </button>
           </div>
           {run && (
             <div
@@ -472,6 +480,20 @@ export default function Room({ id }: { id: string }) {
             </div>
           )}
           {run?.data.error && <p className="inline-error">{run.data.error}</p>}
+          {tab === "live" && (
+            <LiveView
+              agents={agents.map((agent) => ({
+                id: agent.id,
+                name: agent.data.name,
+                role: agent.data.role,
+                status: agent.data.status,
+              }))}
+              events={snap.events}
+              connections={snap.connections}
+              members={snap.members}
+              actorName={actorName}
+            />
+          )}
           {tab === "plan" && (
             <>
               <div className="document">

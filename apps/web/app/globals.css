@@ -479,8 +479,10 @@ p {
   height: 56px;
   padding: 0 23px;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
 }
 .tabs button {
+  flex-shrink: 0;
   font-size: 12px;
   color: #889096;
   border-bottom: 2px solid transparent;
@@ -1744,6 +1746,38 @@ p {
   font-size: 12.5px;
   line-height: 1.5;
   resize: vertical;
+}
+.live-stage {
+  width: 100%;
+  height: min(70vh, 720px);
+  min-height: 520px;
+  background: #d5dbd6;
+}
+.live-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.live-bubble {
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1c2428;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(28, 36, 40, 0.16);
+  pointer-events: none;
+}
+.live-bubble strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #2f6f62;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .demo-editor .muted {
   color: var(--muted);
