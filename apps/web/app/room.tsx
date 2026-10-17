@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Box,
+  Film,
   GitBranch,
   Layers,
   Link2,
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 import { AccountMenu } from "./account";
 import { api, ApiError, type User } from "./api";
+import { DemoPanel, DemoVideo } from "./demo-panel";
 const PlanEditor = dynamic(() => import("./plan-editor"), { ssr: false });
 const DiffEditor = dynamic(() => import("./code-diff"), {
   ssr: false,
@@ -32,6 +35,10 @@ const DiffEditor = dynamic(() => import("./code-diff"), {
 const SandboxTerminal = dynamic(() => import("./sandbox-terminal"), {
   ssr: false,
   loading: () => <div className="loading">Opening the sandbox…</div>,
+});
+const LiveView = dynamic(() => import("./live-view"), {
+  ssr: false,
+  loading: () => <div className="loading">Opening the room…</div>,
 });
 type Entity = {
   id: string;
@@ -204,6 +211,7 @@ export default function Room({ id }: { id: string }) {
     (x) => x.kind === "artifact" && x.data.runId === run?.id,
   );
   const replies = resources.filter((x) => x.kind === "reply");
+  const demos = resources.filter((x) => x.kind === "demo" && !x.data.deleted).reverse();
   const reviews = resources.filter(
     (x) => x.kind === "review" && x.data.runId === run?.id,
   );
@@ -218,7 +226,7 @@ export default function Room({ id }: { id: string }) {
     setBusy(c.type);
     setError("");
     try {
-      await api(`/projects/${id}/commands`, c);
+      await api(`/projects/${id}/commands`, { body: c });
       await load();
     } catch (e: any) {
       setError(e.message);
@@ -418,6 +426,12 @@ export default function Room({ id }: { id: string }) {
             <button className={tab === "desk" ? "active" : ""} onClick={() => setTab("desk")}>
               <MessageSquare size={16} /> Desk
             </button>
+            <button className={tab === "demo" ? "active" : ""} onClick={() => setTab("demo")}>
+              <Film size={16} /> Demo <span className="count">{demos.length}</span>
+            </button>
+            <button className={tab === "live" ? "active" : ""} onClick={() => setTab("live")}>
+              <Box size={16} /> Live
+            </button>
           </div>
           {run && (
             <div
@@ -466,6 +480,24 @@ export default function Room({ id }: { id: string }) {
             </div>
           )}
           {run?.data.error && <p className="inline-error">{run.data.error}</p>}
+          {tab === "live" && (
+            <LiveView
+              agents={agents.map((agent) => ({
+                id: agent.id,
+                name: agent.data.name,
+                role: agent.data.role,
+                status: agent.data.status,
+              }))}
+              events={snap.events}
+              connections={snap.connections}
+              members={snap.members}
+              actorName={actorName}
+              you={{ id: snap.you.id, displayName: snap.you.displayName }}
+              onTalk={async (agentId, text) => {
+                await send({ type: "agent.prompt", agentId, command: text });
+              }}
+            />
+          )}
           {tab === "plan" && (
             <>
               <div className="document">
@@ -710,6 +742,14 @@ export default function Room({ id }: { id: string }) {
               )}
             </div>
           )}
+          {tab === "demo" && (
+            <DemoPanel
+              roomId={id}
+              demos={demos}
+              hasBuild={resources.some((x) => x.kind === "run" && x.data.baseSha)}
+              onChange={() => void load()}
+            />
+          )}
           {tab === "artifacts" && (
             <div className="resource-list">
               {artifacts.length ? (
@@ -744,6 +784,7 @@ export default function Room({ id }: { id: string }) {
             <div className="timeline">
               {snap.events.length ? (
                 snap.events
+                  .filter((event) => event.type !== "demo.progress")
                   .slice(-35)
                   .reverse()
                   .map((event) => (
@@ -961,6 +1002,15 @@ export default function Room({ id }: { id: string }) {
                     )}
                 </div>
               </>
+            ) : drawer.data.artifactType === "video" && drawer.data.demoId ? (
+              (() => {
+                const shown = demos.find((d) => d.id === drawer.data.demoId);
+                return shown ? (
+                  <DemoVideo roomId={id} demo={shown} />
+                ) : (
+                  <p className="inline-error">This demo video was deleted.</p>
+                );
+              })()
             ) : (
               <pre className="artifact-content">
                 {drawer.data.content || drawer.data.description || drawer.data.result}

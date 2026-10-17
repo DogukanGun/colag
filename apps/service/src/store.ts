@@ -35,6 +35,8 @@ export const AGENT_PERMISSIONS = [
   "change.propose",
   "review.create",
   "test.execute",
+  "demo.write",
+  "demo.render",
 ];
 export function systemActor(projectId: string): Actor {
   return { id: "system", type: "system", projectId, permissions: ["*"] };

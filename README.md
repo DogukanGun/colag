@@ -27,6 +27,7 @@ The demo is the product, not a mock. A person signs in, connects Cursor as the c
 | --- | --- | --- |
 | **Bring your agent** | Cursor or Claude Code joins over Colag’s own MCP and is the coder for the room. | Live |
 | **Make an app together** | One board for requirements, algorithms, Mermaid diagrams, and drawings. Everyone in the room writes the same document. | Live |
+| **Make a demo video** | The coder writes a short script; Colag films the room's build in a sandbox, adds a cheerful voice and music, and keeps an MP4 with an e-mail kit in the room. | Live |
 | **Use a Colag agent** | Atlas, Ada, Forge, Pixel, and Sentinel stay on the page. They are not a way to start a room yet. | Coming soon |
 
 A member still approves and merges. The connected client cannot.
@@ -115,6 +116,7 @@ pnpm install
 cp .env.example .env
 pnpm infra:up
 docker pull node:22-alpine
+pnpm demo:image
 claude auth status
 pnpm dev
 ```
@@ -138,6 +140,17 @@ A room can still run the disposable authentication sample when an agent runtime 
 Run state, decisions, events, artifacts, and document updates persist. Interrupted work is marked blocked on restart and needs an explicit retry. Repair attempts are capped at two per run.
 
 `.colag/` holds disposable repositories, worktrees, and runtime files. It is ignored by Git. Never point the service at an existing production repository. Each room gets its own disposable repo.
+
+## Demo videos
+
+Ask the coder for one: “Make a 40-second demo video of the sign-up, in German, with music.” The coder calls `create_demo_video` with the npm script that starts the app and a list of steps (`goto`, `click`, `type`, `press`, `hover`, `scroll`, `wait`), each with an optional voice line, then `render_demo_video`. Members can do the same in the **Demo** tab, edit the script and render again.
+
+A render exports the room's current build (the candidate, or main once merged) and installs its dependencies in a throwaway container. That is the only step with network, and lifecycle scripts never run. It then starts the app in a container without network and films it from the recorder image (`infrastructure/demo-recorder`: headless Chromium and ffmpeg), which joins only the app's loopback. The voice is spoken by xAI (Eve in English, Ara in German) in the service, so the key never enters a container. The result is an MP4 with subtitles, a GIF preview and a thumbnail with a play button, shown in the Demo tab and in Artifacts. A step that fails names itself and keeps a screenshot. One render per room runs at a time, with a daily limit (`COLAG_DEMO_DAILY_LIMIT`, default 10).
+
+```sh
+pnpm demo:image                      # build the recorder image once (about 3.6 GB)
+XAI_API_KEY=… pnpm test:demo [en|de] # film the finished sample app end to end
+```
 
 ## Docs
 
@@ -172,6 +185,7 @@ DATABASE_URL=postgres://127.0.0.1:5432/colag_test COLAG_DATABASE_TESTS=1 pnpm te
 COLAG_TEST_DATABASE_URL=postgres://127.0.0.1:5432/colag_test pnpm test:integration
 pnpm test:browser
 pnpm test:claude
+pnpm demo:image && XAI_API_KEY=… pnpm test:demo
 ```
 
 Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The Claude smoke check uses your authenticated account and only reads the project.

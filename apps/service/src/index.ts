@@ -14,6 +14,8 @@ import { startA2A } from "../../../packages/adapters/src/a2a.ts";
 import { handleMcp } from "./mcp-http.ts";
 import * as sandbox from "./sandbox.ts";
 import * as desk from "./desk.ts";
+import * as demo from "./demo.ts";
+import { createReadStream } from "node:fs";
 import { WebSocketServer } from "ws";
 import { mkdir } from "node:fs/promises";
 import { root } from "../../../packages/git/src/index.ts";
@@ -353,6 +355,51 @@ app.post("/api/v1/projects/:id/desk/:replyId/return", async (req) => {
   const actor = await roomActor(req);
   return desk.settle(actor, (req.params as { replyId: string }).replyId, "returned");
 });
+app.get("/api/v1/projects/:id/demos", async (req) => demo.listDemos(await roomActor(req)));
+app.post("/api/v1/projects/:id/demos", async (req) => demo.createDemo(await roomActor(req), req.body));
+app.get("/api/v1/projects/:id/demos/:demoId", async (req) =>
+  demo.getDemo(await roomActor(req), (req.params as { demoId: string }).demoId),
+);
+app.patch("/api/v1/projects/:id/demos/:demoId", async (req) =>
+  demo.updateDemo(await roomActor(req), (req.params as { demoId: string }).demoId, req.body),
+);
+app.delete("/api/v1/projects/:id/demos/:demoId", async (req, reply) => {
+  await demo.deleteDemo(await roomActor(req), (req.params as { demoId: string }).demoId);
+  reply.status(204).send();
+});
+app.post("/api/v1/projects/:id/demos/:demoId/render", async (req) =>
+  demo.queueRender(await roomActor(req), (req.params as { demoId: string }).demoId),
+);
+app.get("/api/v1/projects/:id/demos/:demoId/files/:name", async (req, reply) => {
+  const params = req.params as { demoId: string; name: string };
+  const file = await demo.demoFile(await roomActor(req), params.demoId, params.name);
+  const download = (req.query as { download?: string }).download !== undefined;
+  reply.header("Content-Type", file.type);
+  reply.header("Accept-Ranges", "bytes");
+  reply.header("Cache-Control", "private, max-age=300");
+  reply.header("X-Content-Type-Options", "nosniff");
+  reply.header(
+    "Content-Disposition",
+    `${download ? "attachment" : "inline"}; filename="${encodeURIComponent(file.download)}"`,
+  );
+  const range = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ""));
+  if (range && (range[1] || range[2])) {
+    let start = range[1] ? Number(range[1]) : file.size - Number(range[2]);
+    let end = range[1] && range[2] ? Number(range[2]) : file.size - 1;
+    start = Math.max(0, start);
+    end = Math.min(end, file.size - 1);
+    if (start > end) {
+      reply.status(416).header("Content-Range", `bytes */${file.size}`);
+      return reply.send();
+    }
+    reply.status(206);
+    reply.header("Content-Range", `bytes ${start}-${end}/${file.size}`);
+    reply.header("Content-Length", String(end - start + 1));
+    return reply.send(createReadStream(file.file, { start, end }));
+  }
+  reply.header("Content-Length", String(file.size));
+  return reply.send(createReadStream(file.file));
+});
 app.get("/api/v1/projects/:id/artifacts/:artifactId", async (req) => {
   const a = await roomActor(req);
   authorize(a, a.projectId, "project.read");
@@ -422,6 +469,7 @@ async function boot() {
     await startA2A();
     await engine.recover();
     await sandbox.reap();
+    await demo.recoverDemos();
     ready = true;
     setInterval(
       () => void store.expireLeases().catch((e) => app.log.error(e)),
@@ -435,8 +483,9 @@ async function boot() {
 }
 void boot();
 process.on("SIGTERM", () => {
-  void sandbox
-    .stopAll()
+  void demo
+    .stopDemos()
+    .then(() => sandbox.stopAll())
     .finally(() => engine.shutdown())
     .finally(() => app.close())
     .finally(() => process.exit(0));

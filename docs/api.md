@@ -13,12 +13,15 @@ The browser signs in with POST /api/v1/auth/request and POST /api/v1/auth/verify
 - POST /api/v1/projects/:id/connections returns a room MCP URL and token once. DELETE revokes it.
 - POST /api/v1/projects/:id/commands accepts `agent.prompt` from a member. MCP cannot approve or merge.
 - POST /api/v1/projects/:id/commands accepts `board.submit` from a member. Atlas appends a design analysis to the shared board and does not replace it.
+- GET/POST /api/v1/projects/:id/demos; GET/PATCH/DELETE /api/v1/projects/:id/demos/:demoId: demo videos of the room's build (title, language en/de, music, e-mail kit, script). Script errors return 400 `invalid_demo` with every problem listed.
+- POST /api/v1/projects/:id/demos/:demoId/render queues a render: 409 while one of the room's demos renders, 429 over the daily limit.
+- GET /api/v1/projects/:id/demos/:demoId/files/:name serves `video.mp4`, `preview.gif`, `thumbnail.png`, `subtitles.srt` or `fail.png` to members, with Range support; `?download` saves it.
 
 The protocol package exports request, response, entity and event types. Unknown commands are rejected. Dependency validation, permissions, transition rules and event creation are shared across adapters. Run start performs prerequisite checks before invoking any model.
 
 Hocuspocus accepts the same credential in connection authentication and restricts document names to project IDs. Only project members with document write permission may edit.
 
-MCP stdio tools expose project inspection, tasks, decisions, delegation, artifact publishing, document edits, workspace files, sandbox tests and change proposals. The stdio bridge forwards the bound bearer token; file and process operations remain service-owned.
+MCP stdio tools expose project inspection, tasks, decisions, delegation, artifact publishing, document edits, workspace files, sandbox tests, change proposals and demo videos (`create_demo_video`, `update_demo_video`, `render_demo_video`, `get_demo_video`, also on the room's HTTP MCP). The stdio bridge forwards the bound bearer token; file and process operations remain service-owned.
 
 A2A publishes /.well-known/agent-card.json and the SDK JSON-RPC endpoint /a2a. Agent cards advertise task submission and artifacts. Authenticated requests map to internal runs or delegated tasks, with durable external/internal IDs. A2A cancellation calls the same stop command; terminal tasks are not restarted. An independent local sample A2A reviewer demonstrates outbound delegation. External plans still require human approval.
 

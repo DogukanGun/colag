@@ -16,6 +16,7 @@ import type {
   Plan,
 } from "../../../packages/protocol/src/index.ts";
 import * as store from "./store.ts";
+import * as demo from "./demo.ts";
 import * as git from "../../../packages/git/src/index.ts";
 import { preflight, runClaude } from "../../../packages/runtime/src/claude.ts";
 import {
@@ -639,12 +640,20 @@ async function promptAgent(
     }
     return recorded;
   }
-  assert(
-    active && active.data.status === "running",
-    "Approve the plan before this agent starts work",
-    "conflict",
-    409,
-  );
+  if (!active || active.data.status !== "running") {
+    await transaction(
+      store.systemActor(actor.projectId),
+      randomUUID(),
+      { heard: c.command },
+      async (tx) => {
+        await tx.emit("agent.activity", agent.id, {
+          text: "Approve the plan before I start work.",
+        });
+        return { ok: true };
+      },
+    );
+    return recorded;
+  }
   assert(!jobs.has(active.id), "This room is already working", "conflict", 409);
   launch(active.id, () => promptSpecialist(active.id, agent.id, c.command));
   return recorded;
@@ -1159,6 +1168,14 @@ export async function tools(
     authorize(actor, actor.projectId, "project.read");
     return store.snapshot(actor.projectId);
   }
+  if (name === "create_demo_video") return demo.createDemo(actor, args);
+  if (name === "update_demo_video") {
+    const { demoId, ...rest } = args ?? {};
+    return demo.updateDemo(actor, String(demoId), rest);
+  }
+  if (name === "render_demo_video") return demo.queueRender(actor, String(args?.demoId));
+  if (name === "get_demo_video")
+    return args?.demoId ? demo.getDemo(actor, String(args.demoId)) : demo.listDemos(actor);
   if (name === "read_document") {
     authorize(actor, actor.projectId, "project.read");
     return { text: await readDocument(actor.projectId) };
