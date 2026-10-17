@@ -226,7 +226,7 @@ export default function Room({ id }: { id: string }) {
     setBusy(c.type);
     setError("");
     try {
-      await api(`/projects/${id}/commands`, c);
+      await api(`/projects/${id}/commands`, { body: c });
       await load();
     } catch (e: any) {
       setError(e.message);
@@ -492,6 +492,10 @@ export default function Room({ id }: { id: string }) {
               connections={snap.connections}
               members={snap.members}
               actorName={actorName}
+              you={{ id: snap.you.id, displayName: snap.you.displayName }}
+              onTalk={async (agentId, text) => {
+                await send({ type: "agent.prompt", agentId, command: text });
+              }}
             />
           )}
           {tab === "plan" && (

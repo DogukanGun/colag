@@ -640,12 +640,20 @@ async function promptAgent(
     }
     return recorded;
   }
-  assert(
-    active && active.data.status === "running",
-    "Approve the plan before this agent starts work",
-    "conflict",
-    409,
-  );
+  if (!active || active.data.status !== "running") {
+    await transaction(
+      store.systemActor(actor.projectId),
+      randomUUID(),
+      { heard: c.command },
+      async (tx) => {
+        await tx.emit("agent.activity", agent.id, {
+          text: "Approve the plan before I start work.",
+        });
+        return { ok: true };
+      },
+    );
+    return recorded;
+  }
   assert(!jobs.has(active.id), "This room is already working", "conflict", 409);
   launch(active.id, () => promptSpecialist(active.id, agent.id, c.command));
   return recorded;

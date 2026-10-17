@@ -1748,10 +1748,53 @@ p {
   resize: vertical;
 }
 .live-stage {
+  position: relative;
   width: 100%;
   height: min(70vh, 720px);
   min-height: 520px;
   background: #d5dbd6;
+}
+.live-talk {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(460px, calc(100% - 32px));
+  padding: 8px 8px 8px 12px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 28px rgba(28, 36, 40, 0.16);
+  transform: translateX(-50%);
+}
+.live-talk label {
+  flex: none;
+  color: #2f6f62;
+  font-size: 12px;
+  font-weight: 650;
+}
+.live-talk input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.live-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  z-index: 2;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2a3336;
+  font-size: 12px;
+  pointer-events: none;
 }
 .live-stage canvas {
   display: block;
