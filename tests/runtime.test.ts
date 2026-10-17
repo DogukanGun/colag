@@ -6,6 +6,7 @@ import { fieldsToJsonSchema, zodToJsonSchema } from "../packages/runtime/src/jso
 import { tools } from "../packages/adapters/src/catalog.ts";
 import { modelProvider } from "../packages/runtime/src/types.ts";
 import {
+  retryDelay,
   modelConfig,
   preflightOpenAI,
   runOpenAI,
@@ -15,6 +16,7 @@ import {
 type Handler = (req: { method: string; url: string; body: any; headers: any }) => {
   status?: number;
   body: unknown;
+  headers?: Record<string, string>;
 };
 async function serve(handler: Handler): Promise<{ url: string; server: Server }> {
   const server = createServer((req, res) => {
@@ -26,7 +28,7 @@ async function serve(handler: Handler): Promise<{ url: string; server: Server }>
         body = JSON.parse(raw);
       } catch {}
       const out = handler({ method: req.method!, url: req.url!, body, headers: req.headers });
-      res.writeHead(out.status || 200, { "Content-Type": "application/json" });
+      res.writeHead(out.status || 200, { "Content-Type": "application/json", ...out.headers });
       res.end(JSON.stringify(out.body));
     });
   });
@@ -211,6 +213,7 @@ test("the tool loop executes Colag tools and returns the final answer", async ()
       model: "m",
       maxTurns: 5,
       requestTimeoutMs: 5000,
+    maxRetries: 0,
       api: api.url,
     },
   );
@@ -262,6 +265,7 @@ test("structured output is parsed, with a formatting pass when prose leaks in", 
     model: "m",
     maxTurns: 3,
     requestTimeoutMs: 5000,
+    maxRetries: 0,
     api: "http://127.0.0.1:1",
   };
   const schema = { type: "object", properties: { title: { type: "string" } } };
@@ -307,6 +311,7 @@ test("turn limits, server errors and cancellation surface as errors", async () =
     model: "m",
     maxTurns: 2,
     requestTimeoutMs: 5000,
+    maxRetries: 0,
     api: "http://127.0.0.1:1",
   };
   await assert.rejects(
@@ -328,4 +333,49 @@ test("turn limits, server errors and cancellation surface as errors", async () =
     runOpenAI({ sessionId: "s", prompt: "p", token: "t", signal: controller.signal }, config),
     /cancelled/,
   );
+});
+
+test("rate limits and overloaded upstreams are retried with backoff", async () => {
+  let calls = 0;
+  const limited = await serve(() => {
+    calls++;
+    if (calls === 1) return { status: 429, headers: { "Retry-After": "0" }, body: { error: "slow down" } };
+    if (calls === 2) return { status: 503, headers: { "Retry-After": "0" }, body: { error: "busy" } };
+    return { body: { choices: [{ message: { role: "assistant", content: "done" } }] } };
+  });
+  servers.push(limited.server);
+  const config = {
+    baseUrl: `${limited.url}/v1`,
+    apiKey: "",
+    model: "m",
+    maxTurns: 2,
+    requestTimeoutMs: 5000,
+    maxRetries: 3,
+    api: "http://127.0.0.1:1",
+  };
+  const answer = await runOpenAI(
+    { sessionId: "s", prompt: "p", token: "t", signal: new AbortController().signal },
+    config,
+  );
+  assert.equal(answer, "done");
+  assert.equal(calls, 3);
+  calls = 0;
+  const always = await serve(() => {
+    calls++;
+    return { status: 429, headers: { "Retry-After": "0" }, body: { error: "slow down" } };
+  });
+  servers.push(always.server);
+  await assert.rejects(
+    runOpenAI(
+      { sessionId: "s", prompt: "p", token: "t", signal: new AbortController().signal },
+      { ...config, baseUrl: `${always.url}/v1`, maxRetries: 2 },
+    ),
+    /answered 429/,
+  );
+  assert.equal(calls, 3);
+  assert.equal(retryDelay("7", 0), 7000);
+  assert.equal(retryDelay("600", 0), 60000);
+  const backoff = retryDelay(null, 3);
+  assert.ok(backoff >= 8000 && backoff < 8250);
+  assert.ok(retryDelay(null, 10) < 30250);
 });

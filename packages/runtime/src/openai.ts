@@ -19,6 +19,7 @@ export interface ModelConfig {
   model: string;
   maxTurns: number;
   requestTimeoutMs: number;
+  maxRetries: number;
   api: string;
 }
 export function modelConfig(env: NodeJS.ProcessEnv = process.env): ModelConfig {
@@ -36,6 +37,7 @@ export function modelConfig(env: NodeJS.ProcessEnv = process.env): ModelConfig {
     model,
     maxTurns: Number(env.COLAG_MODEL_MAX_TURNS || 60),
     requestTimeoutMs: Number(env.COLAG_MODEL_REQUEST_TIMEOUT_MS || 180000),
+    maxRetries: Number(env.COLAG_MODEL_MAX_RETRIES ?? 5),
     api: env.COLAG_API_URL || `http://127.0.0.1:${env.COLAG_PORT || 4310}`,
   };
 }
@@ -104,18 +106,48 @@ interface Usage {
   completion_tokens: number;
   total_tokens: number;
 }
+/** Rate limits (429) and overloaded upstreams (502/503/504) are worth waiting out; a shared team key hits them often. */
+function retryable(status: number) {
+  return status === 429 || status === 502 || status === 503 || status === 504;
+}
+export function retryDelay(retryAfter: string | null, attempt: number) {
+  const seconds = Number(retryAfter);
+  if (retryAfter && Number.isFinite(seconds)) return Math.min(seconds * 1000, 60000);
+  const date = retryAfter ? Date.parse(retryAfter) : NaN;
+  if (Number.isFinite(date)) return Math.min(Math.max(date - Date.now(), 0), 60000);
+  return Math.min(1000 * 2 ** attempt, 30000) + Math.floor(Math.random() * 250);
+}
+function sleep(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const t = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 async function complete(
   config: ModelConfig,
   body: Record<string, unknown>,
   signal: AbortSignal,
 ) {
-  const r = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: authHeaders(config),
-    body: JSON.stringify({ model: config.model, ...body }),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(config.requestTimeoutMs)]),
-  });
-  const text = await r.text();
+  let r: Response, text: string;
+  for (let attempt = 0; ; attempt++) {
+    r = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: authHeaders(config),
+      body: JSON.stringify({ model: config.model, ...body }),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(config.requestTimeoutMs)]),
+    });
+    text = await r.text();
+    if (!retryable(r.status) || attempt >= config.maxRetries) break;
+    await sleep(retryDelay(r.headers.get("retry-after"), attempt), signal);
+  }
   if (!r.ok)
     throw new Error(
       `${config.model} at ${new URL(config.baseUrl).host} answered ${r.status}: ${text.slice(0, 600)}`,
