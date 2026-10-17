@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { speak } from "../packages/runtime/src/tts.ts";
 
 export const lines = [
   {
@@ -46,11 +47,6 @@ export type Durations = Record<LineId, number>;
 
 const outDir = resolve("demos/sales/out/voice");
 
-function key() {
-  if (process.env.XAI_API_KEY) return process.env.XAI_API_KEY;
-  return readFileSync("/tmp/colag-xai.key", "utf8").trim();
-}
-
 function duration(file: string) {
   const raw = execFileSync(
     "ffprobe",
@@ -70,35 +66,18 @@ function duration(file: string) {
 
 export async function generateVoice() {
   mkdirSync(outDir, { recursive: true });
-  const token = key();
   const durations = {} as Durations;
   for (const line of lines) {
-    const response = await fetch("https://api.x.ai/v1/tts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: line.text,
-        voice_id: "leo",
-        language: "en",
-        text_normalization: true,
-      }),
+    const cached = await speak(line.text, {
+      voice: "leo",
+      language: "en",
+      format: "mp3",
+      cacheDir: resolve(outDir, ".cache"),
+    }).catch((error: Error) => {
+      throw new Error(`Voice ${line.id} failed: ${error.message}`);
     });
-    const type = response.headers.get("content-type") || "";
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 400);
-      throw new Error(`Voice ${line.id} failed (${response.status}): ${detail}`);
-    }
     const file = resolve(outDir, `${line.id}.mp3`);
-    if (type.includes("json")) {
-      const body = (await response.json()) as { audio?: string };
-      if (!body.audio) throw new Error(`Voice ${line.id} returned no audio`);
-      writeFileSync(file, Buffer.from(body.audio, "base64"));
-    } else {
-      writeFileSync(file, Buffer.from(await response.arrayBuffer()));
-    }
+    copyFileSync(cached, file);
     durations[line.id] = duration(file);
     console.log(`${line.id} ${durations[line.id].toFixed(2)}s`);
   }

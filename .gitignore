@@ -8,3 +8,5 @@ demos/sales/out/
 *.tsbuildinfo
 .next-dev/
 apps/web/public/monaco/
+hackathon/amd-academy/mc3/.index.json
+hackathon/amd-academy/mc3/output/

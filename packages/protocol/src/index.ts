@@ -35,7 +35,9 @@ export type Kind =
   | "delegation"
   | "lock"
   | "a2a"
-  | "purchase";
+  | "purchase"
+  | "reply"
+  | "demo";
 export interface Entity {
   id: string;
   projectId: string;
@@ -80,6 +82,8 @@ export const MEMBER_ACTIONS = [
   "agent.prompt",
   "board.submit",
   "change.propose",
+  "demo.write",
+  "demo.render",
 ];
 /** Tools a connected coding client may call. Plan approval and merge are absent. */
 export const EXTERNAL_MCP_PERMISSIONS = [
@@ -94,6 +98,8 @@ export const EXTERNAL_MCP_PERMISSIONS = [
   "workspace.read",
   "workspace.write",
   "change.propose",
+  "demo.write",
+  "demo.render",
 ];
 export interface CollaborationEvent {
   seq: number;

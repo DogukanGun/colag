@@ -41,7 +41,12 @@ export function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
     case z.ZodFirstPartyTypeKind.ZodOptional:
     case z.ZodFirstPartyTypeKind.ZodNullable:
     case z.ZodFirstPartyTypeKind.ZodDefault:
-      return zodToJsonSchema(def.innerType);
+      return { ...zodToJsonSchema(def.innerType), ...description };
+    case z.ZodFirstPartyTypeKind.ZodEffects:
+      // refine/superRefine/transform: describe the shape; the service still validates.
+      return { ...zodToJsonSchema(def.schema), ...description };
+    case z.ZodFirstPartyTypeKind.ZodPipeline:
+      return { ...zodToJsonSchema(def.in), ...description };
     default:
       return { ...description };
   }

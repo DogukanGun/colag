@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { specSchema } from "../../protocol/src/demo.ts";
 export interface ToolSpec {
   name: string;
   description: string;
@@ -97,6 +98,51 @@ export const tools: ToolSpec[] = [
     name: "propose_change",
     description: "Commit the task workspace and record a change",
     schema: {},
+    remote: true,
+  },
+  {
+    name: "create_demo_video",
+    description:
+      "Write a demo video of the app this room builds (the current build: the candidate, or main once merged). " +
+      "Colag starts the app with `npm run <app.start>` (plus app.api.start) in a sandbox without internet, records your steps " +
+      "in a browser with a visible cursor, speaks each step's `say` line with a cheerful voice (en: Eve, de: Ara), adds a music bed, " +
+      "and publishes an MP4 (plus a GIF preview and a thumbnail with a play button for e-mails) in the room's Artifacts. " +
+      "Write one short, upbeat line per step (about 6–14 words), aim for 30–60 seconds in total, use stable selectors " +
+      "(text=Sign in, role=button[name=\"Sign in\"], #email) and goto paths inside the app only. Creates a draft; then call render_demo_video.",
+    schema: {
+      title: z.string().describe("The video title, e.g. 'Sign-up in 30 seconds'"),
+      language: z.enum(["en", "de"]).optional().describe("Voice language (default en)"),
+      music: z.boolean().optional().describe("A cheerful music bed under the voice (default true)"),
+      emailKit: z.boolean().optional().describe("Also make a GIF preview and a thumbnail for e-mails (default true)"),
+      spec: specSchema.describe("How to start the app and what to show"),
+    },
+    remote: true,
+  },
+  {
+    name: "update_demo_video",
+    description: "Change a demo video's title, language, music, e-mail kit or script (it goes back to draft)",
+    schema: {
+      demoId: z.string(),
+      title: z.string().optional(),
+      language: z.enum(["en", "de"]).optional(),
+      music: z.boolean().optional(),
+      emailKit: z.boolean().optional(),
+      spec: specSchema.optional(),
+    },
+    remote: true,
+  },
+  {
+    name: "render_demo_video",
+    description:
+      "Record and render a demo video (a few minutes). One render per room at a time and a daily limit. Poll get_demo_video for the result; " +
+      "if a step fails, the error names the step and a screenshot is kept, so fix that step with update_demo_video and render again.",
+    schema: { demoId: z.string() },
+    remote: true,
+  },
+  {
+    name: "get_demo_video",
+    description: "The demo videos of this room, or one of them: status, progress, error and file links",
+    schema: { demoId: z.string().optional() },
     remote: true,
   },
   {

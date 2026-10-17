@@ -81,6 +81,25 @@ test("every catalog tool becomes a valid OpenAI tool definition", () => {
   ]);
 });
 
+test("nested, refined and described catalog schemas keep their structure", () => {
+  const defs = toolDefinitions();
+  const create = defs.find((d) => d.function.name === "create_demo_video");
+  assert.ok(create, "create_demo_video is in the catalog");
+  const params = create!.function.parameters as any;
+  assert.deepEqual(params.required, ["title", "spec"]);
+  assert.match(params.properties.title.description, /video title/);
+  assert.deepEqual(params.properties.language.enum, ["en", "de"]);
+  const spec = params.properties.spec;
+  assert.equal(spec.type, "object");
+  assert.match(spec.description, /start the app/);
+  assert.deepEqual(spec.required, ["app", "steps"]);
+  assert.equal(spec.properties.steps.type, "array");
+  assert.deepEqual(spec.properties.steps.items.properties.do.enum.slice(0, 2), ["goto", "click"]);
+  assert.deepEqual(spec.properties.app.required, ["start", "port"]);
+  for (const def of defs)
+    assert.doesNotThrow(() => JSON.stringify(def.function.parameters));
+});
+
 test("provider selection defaults to claude and rejects unknown values", () => {
   assert.equal(modelProvider({}), "claude");
   assert.equal(modelProvider({ COLAG_MODEL_PROVIDER: "OpenAI" }), "openai");

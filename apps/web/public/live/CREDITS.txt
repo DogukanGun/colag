@@ -1,0 +1,4 @@
+Studio lighting and furniture are CC0 from Poly Haven (https://polyhaven.com).
+
+HDRI: brown_photostudio_02 (1k)
+Models: metal_office_desk, painted_wooden_chair_01, potted_plant_02, desk_lamp_arm_01, side_table_01 (1k)

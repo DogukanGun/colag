@@ -12,17 +12,21 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Box,
+  Film,
   GitBranch,
   Layers,
   Link2,
   RefreshCw,
   Square,
+  MessageSquare,
   Terminal,
   Users,
   X,
 } from "lucide-react";
 import { AccountMenu } from "./account";
 import { api, ApiError, type User } from "./api";
+import { DemoPanel, DemoVideo } from "./demo-panel";
 const PlanEditor = dynamic(() => import("./plan-editor"), { ssr: false });
 const DiffEditor = dynamic(() => import("./code-diff"), {
   ssr: false,
@@ -31,6 +35,10 @@ const DiffEditor = dynamic(() => import("./code-diff"), {
 const SandboxTerminal = dynamic(() => import("./sandbox-terminal"), {
   ssr: false,
   loading: () => <div className="loading">Opening the sandbox…</div>,
+});
+const LiveView = dynamic(() => import("./live-view"), {
+  ssr: false,
+  loading: () => <div className="loading">Opening the room…</div>,
 });
 type Entity = {
   id: string;
@@ -101,6 +109,7 @@ export default function Room({ id }: { id: string }) {
     streamUrl?: string;
   } | null>(null);
   const [sandboxError, setSandboxError] = useState("");
+  const [deskMessage, setDeskMessage] = useState("How many days does a customer have to return a lamp?");
   const panelRef = useRef<HTMLElement>(null);
   const load = useCallback(async () => {
     const data = await api(`/projects/${id}`);
@@ -201,6 +210,8 @@ export default function Room({ id }: { id: string }) {
   const artifacts = resources.filter(
     (x) => x.kind === "artifact" && x.data.runId === run?.id,
   );
+  const replies = resources.filter((x) => x.kind === "reply");
+  const demos = resources.filter((x) => x.kind === "demo" && !x.data.deleted).reverse();
   const reviews = resources.filter(
     (x) => x.kind === "review" && x.data.runId === run?.id,
   );
@@ -215,7 +226,7 @@ export default function Room({ id }: { id: string }) {
     setBusy(c.type);
     setError("");
     try {
-      await api(`/projects/${id}/commands`, c);
+      await api(`/projects/${id}/commands`, { body: c });
       await load();
     } catch (e: any) {
       setError(e.message);
@@ -412,6 +423,15 @@ export default function Room({ id }: { id: string }) {
             <button className={tab === "build" ? "active" : ""} onClick={() => setTab("build")}>
               <Terminal size={16} /> Build
             </button>
+            <button className={tab === "desk" ? "active" : ""} onClick={() => setTab("desk")}>
+              <MessageSquare size={16} /> Desk
+            </button>
+            <button className={tab === "demo" ? "active" : ""} onClick={() => setTab("demo")}>
+              <Film size={16} /> Demo <span className="count">{demos.length}</span>
+            </button>
+            <button className={tab === "live" ? "active" : ""} onClick={() => setTab("live")}>
+              <Box size={16} /> Live
+            </button>
           </div>
           {run && (
             <div
@@ -460,6 +480,24 @@ export default function Room({ id }: { id: string }) {
             </div>
           )}
           {run?.data.error && <p className="inline-error">{run.data.error}</p>}
+          {tab === "live" && (
+            <LiveView
+              agents={agents.map((agent) => ({
+                id: agent.id,
+                name: agent.data.name,
+                role: agent.data.role,
+                status: agent.data.status,
+              }))}
+              events={snap.events}
+              connections={snap.connections}
+              members={snap.members}
+              actorName={actorName}
+              you={{ id: snap.you.id, displayName: snap.you.displayName }}
+              onTalk={async (agentId, text) => {
+                await send({ type: "agent.prompt", agentId, command: text });
+              }}
+            />
+          )}
           {tab === "plan" && (
             <>
               <div className="document">
@@ -624,6 +662,94 @@ export default function Room({ id }: { id: string }) {
               {sandboxError && !build?.sha && <p className="inline-error">{sandboxError}</p>}
             </div>
           )}
+          {tab === "desk" && (
+            <div className="build-view">
+              <form
+                className="build-bar"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setBusy("desk");
+                  setSandboxError("");
+                  void api(`/projects/${id}/desk`, { body: { message: deskMessage } })
+                    .then(() => load())
+                    .catch((e) => setSandboxError(e.message))
+                    .finally(() => setBusy(""));
+                }}
+              >
+                <input
+                  value={deskMessage}
+                  onChange={(event) => setDeskMessage(event.target.value)}
+                  aria-label="Customer message"
+                />
+                <button className="primary small" disabled={!!busy || !deskMessage.trim()}>
+                  Draft reply
+                </button>
+              </form>
+              {sandboxError && tab === "desk" && <p className="inline-error">{sandboxError}</p>}
+              {replies.length ? (
+                replies.map((reply) => (
+                  <article key={reply.id} className="desk-reply">
+                    <strong>{reply.data.message}</strong>
+                    <p>
+                      {reply.data.answer
+                        ? reply.data.answer
+                        : "The documents do not say. Nothing was drafted."}
+                    </p>
+                    <small>
+                      {reply.data.citations?.length
+                        ? reply.data.citations.join(", ")
+                        : "No source"}
+                      {" · "}
+                      {reply.data.status}
+                    </small>
+                    {reply.data.status === "pending" && (
+                      <div className="build-bar">
+                        <button
+                          className="primary small"
+                          disabled={!!busy}
+                          onClick={() => {
+                            setBusy("approve");
+                            void api(`/projects/${id}/desk/${reply.id}/approve`, { body: {} })
+                              .then(() => load())
+                              .catch((e) => setSandboxError(e.message))
+                              .finally(() => setBusy(""));
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="secondary small"
+                          disabled={!!busy}
+                          onClick={() => {
+                            setBusy("return");
+                            void api(`/projects/${id}/desk/${reply.id}/return`, { body: {} })
+                              .then(() => load())
+                              .catch((e) => setSandboxError(e.message))
+                              .finally(() => setBusy(""));
+                          }}
+                        >
+                          Send back
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <strong>No customer message yet</strong>
+                  <p>A draft cites the company document it used, or it stays empty. A member sends it.</p>
+                </div>
+              )}
+            </div>
+          )}
+          {tab === "demo" && (
+            <DemoPanel
+              roomId={id}
+              demos={demos}
+              hasBuild={resources.some((x) => x.kind === "run" && x.data.baseSha)}
+              onChange={() => void load()}
+            />
+          )}
           {tab === "artifacts" && (
             <div className="resource-list">
               {artifacts.length ? (
@@ -658,6 +784,7 @@ export default function Room({ id }: { id: string }) {
             <div className="timeline">
               {snap.events.length ? (
                 snap.events
+                  .filter((event) => event.type !== "demo.progress")
                   .slice(-35)
                   .reverse()
                   .map((event) => (
@@ -875,6 +1002,15 @@ export default function Room({ id }: { id: string }) {
                     )}
                 </div>
               </>
+            ) : drawer.data.artifactType === "video" && drawer.data.demoId ? (
+              (() => {
+                const shown = demos.find((d) => d.id === drawer.data.demoId);
+                return shown ? (
+                  <DemoVideo roomId={id} demo={shown} />
+                ) : (
+                  <p className="inline-error">This demo video was deleted.</p>
+                );
+              })()
             ) : (
               <pre className="artifact-content">
                 {drawer.data.content || drawer.data.description || drawer.data.result}
