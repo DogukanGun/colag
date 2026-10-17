@@ -2,7 +2,7 @@ import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { z } from "zod";
-import { fieldsToJsonSchema, zodToJsonSchema } from "../packages/runtime/src/json-schema.ts";
+import { fieldsToJsonSchema, schemaProblems, zodToJsonSchema } from "../packages/runtime/src/json-schema.ts";
 import { tools } from "../packages/adapters/src/catalog.ts";
 import { modelProvider } from "../packages/runtime/src/types.ts";
 import {
@@ -378,4 +378,82 @@ test("rate limits and overloaded upstreams are retried with backoff", async () =
   const backoff = retryDelay(null, 3);
   assert.ok(backoff >= 8000 && backoff < 8250);
   assert.ok(retryDelay(null, 10) < 30250);
+});
+
+const planSchema = {
+  type: "object",
+  properties: {
+    document: { type: "string" },
+    tasks: {
+      type: "array",
+      minItems: 2,
+      items: {
+        type: "object",
+        properties: { key: { type: "string" }, role: { type: "string", enum: ["Architect", "Backend"] } },
+        required: ["key", "role"],
+      },
+    },
+  },
+  required: ["document", "tasks"],
+};
+
+test("schema checks name missing fields, wrong types, enums and list sizes", () => {
+  assert.deepEqual(
+    schemaProblems({ document: "d", tasks: [{ key: "a", role: "Architect" }, { key: "b", role: "Backend" }] }, planSchema),
+    [],
+  );
+  assert.deepEqual(schemaProblems({ tasks: [{ key: 1, role: "QA" }] }, planSchema), [
+    "$.document is missing",
+    "$.tasks needs at least 2 items, got 1",
+    "$.tasks[0].key should be string, got number",
+    '$.tasks[0].role should be one of ["Architect","Backend"]',
+  ]);
+  assert.deepEqual(schemaProblems("x", planSchema), ["$ should be object, got string"]);
+});
+
+test("a model that echoes the schema is asked again with the problem named", async () => {
+  const asks: any[] = [];
+  const good = { document: "Plan", tasks: [{ key: "a", role: "Architect" }, { key: "b", role: "Backend" }] };
+  const model = await serve(({ body }) => {
+    asks.push(body);
+    if (asks.length === 1)
+      return { body: { choices: [{ message: { role: "assistant", content: JSON.stringify(planSchema) } }] } };
+    if (body.response_format?.type === "json_schema")
+      return { status: 422, body: { error: { message: "json_schema not supported" } } };
+    return { body: { choices: [{ message: { role: "assistant", content: JSON.stringify(good) } }] } };
+  });
+  servers.push(model.server);
+  const config = {
+    baseUrl: `${model.url}/v1`,
+    apiKey: "",
+    model: "m",
+    maxTurns: 3,
+    requestTimeoutMs: 5000,
+    maxRetries: 0,
+    api: "http://127.0.0.1:1",
+  };
+  const out = await runOpenAI(
+    { sessionId: "s", prompt: "Plan.", token: "t", signal: new AbortController().signal, schema: planSchema },
+    config,
+  );
+  assert.deepEqual(out, good);
+  assert.equal(asks.length, 3);
+  assert.equal(asks[2].response_format?.type, "json_object");
+  assert.match(asks[2].messages.at(-1).content, /repeats the JSON Schema/);
+  assert.equal(asks[2].tools, undefined);
+
+  let calls = 0;
+  const stubborn = await serve(() => {
+    calls++;
+    return { body: { choices: [{ message: { role: "assistant", content: '{"document":"only"}' } }] } };
+  });
+  servers.push(stubborn.server);
+  await assert.rejects(
+    runOpenAI(
+      { sessionId: "s", prompt: "Plan.", token: "t", signal: new AbortController().signal, schema: planSchema },
+      { ...config, baseUrl: `${stubborn.url}/v1` },
+    ),
+    /did not return the requested JSON: \$\.tasks is missing/,
+  );
+  assert.equal(calls, 3);
 });

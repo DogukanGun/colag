@@ -1,6 +1,6 @@
 import { tools as catalog } from "../../adapters/src/catalog.ts";
 import { callTool } from "../../adapters/src/tool-client.ts";
-import { fieldsToJsonSchema } from "./json-schema.ts";
+import { fieldsToJsonSchema, schemaProblems } from "./json-schema.ts";
 import type { AgentRequest } from "./types.ts";
 
 /**
@@ -203,6 +203,18 @@ function extractJson(text: string): unknown {
   }
   throw new Error("Model did not return the requested JSON");
 }
+function structuredProblems(text: string, schema: object): string[] {
+  let value: unknown;
+  try {
+    value = extractJson(text);
+  } catch {
+    return ["it is not a JSON object"];
+  }
+  const v = value as any;
+  if (v && typeof v === "object" && v.type === "object" && v.properties && typeof v.properties === "object")
+    return ["it repeats the JSON Schema instead of filling it in"];
+  return schemaProblems(value, schema);
+}
 export async function runOpenAI(
   r: AgentRequest,
   config: ModelConfig = modelConfig(),
@@ -213,7 +225,7 @@ export async function runOpenAI(
     {
       role: "user",
       content: r.schema
-        ? `${r.prompt}\n\nWhen finished, reply with only a JSON object matching this schema:\n${JSON.stringify(r.schema)}`
+        ? `${r.prompt}\n\nWhen finished, reply with only a JSON object whose content follows this JSON Schema. Fill in real values; do not repeat the schema itself:\n${JSON.stringify(r.schema)}`
         : r.prompt,
     },
   ];
@@ -278,48 +290,53 @@ export async function runOpenAI(
   const text = typeof final.content === "string" ? final.content : "";
   let output: unknown = text;
   if (r.schema) {
-    try {
-      output = extractJson(text);
-    } catch {
-      // One formatting pass without tools, for servers that reject
-      // response_format alongside tools.
-      const { message, usage: u } = await complete(
-        config,
+    let problems = structuredProblems(text, r.schema);
+    let reply = text;
+    // Up to two formatting passes without tools. Each names what was wrong,
+    // and response_format falls back from json_schema to json_object to none
+    // for servers that support less.
+    const history = [...messages];
+    for (let pass = 0; problems.length && pass < 2; pass++) {
+      if (pass > 0) history.push({ role: "assistant", content: reply });
+      const ask = [
+        ...history,
         {
-          messages: [
-            ...messages,
-            {
-              role: "user",
-              content:
-                "Reply with only the JSON object described earlier. No prose, no code fence.",
-            },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: { name: "result", schema: r.schema },
-          },
+          role: "user",
+          content:
+            `That reply is not the requested result: ${problems.slice(0, 12).join("; ")}. ` +
+            "Reply with only the JSON object, filled in with real values that follow the schema given earlier. " +
+            "Do not return the schema itself. No prose, no code fence.",
         },
-        r.signal,
-      ).catch(() =>
-        complete(
-          config,
-          {
-            messages: [
-              ...messages,
-              {
-                role: "user",
-                content:
-                  "Reply with only the JSON object described earlier. No prose, no code fence.",
-              },
-            ],
-          },
-          r.signal,
-        ),
-      );
-      add(u);
-      r.onOutput?.(assistantLine(message));
-      output = extractJson(typeof message.content === "string" ? message.content : "");
+      ];
+      history.push(ask[ask.length - 1]);
+      let result: Awaited<ReturnType<typeof complete>> | undefined;
+      let failure: unknown;
+      for (const response_format of [
+        { type: "json_schema", json_schema: { name: "result", schema: r.schema } },
+        { type: "json_object" },
+        undefined,
+      ]) {
+        try {
+          result = await complete(
+            config,
+            response_format ? { messages: ask, response_format } : { messages: ask },
+            r.signal,
+          );
+          break;
+        } catch (e) {
+          if (r.signal.aborted) throw e;
+          failure = e;
+        }
+      }
+      if (!result) throw failure;
+      add(result.usage);
+      r.onOutput?.(assistantLine(result.message));
+      reply = typeof result.message.content === "string" ? result.message.content : "";
+      problems = structuredProblems(reply, r.schema);
     }
+    if (problems.length)
+      throw new Error(`Model did not return the requested JSON: ${problems.slice(0, 5).join("; ")}`);
+    output = extractJson(reply);
   }
   r.onOutput?.({
     type: "result",
