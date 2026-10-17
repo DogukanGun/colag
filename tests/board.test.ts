@@ -183,7 +183,7 @@ test(
       /membership/i,
     );
     engine.configureTestRuntime({
-      runClaude: async (request) => {
+      runAgent: async (request) => {
         if (request.prompt.includes("BLOCK_THIS_BOARD"))
           throw new Error("claude: not authenticated");
         return analysis;

@@ -28,7 +28,7 @@ The demo is the product, not a mock. A person signs in, connects Cursor as the c
 | **Bring your agent** | Cursor or Claude Code joins over Colag’s own MCP and is the coder for the room. | Live |
 | **Make an app together** | One board for requirements, algorithms, Mermaid diagrams, and drawings. Everyone in the room writes the same document. | Live |
 | **Make a demo video** | The coder writes a short script; Colag films the room's build in a sandbox, adds a cheerful voice and music, and keeps an MP4 with an e-mail kit in the room. | Live |
-| **Use a Colag agent** | Atlas, Ada, Forge, Pixel, and Sentinel stay on the page. They are not a way to start a room yet. | Coming soon |
+| **Command a Colag agent** | Atlas plans the run; Ada, Forge, and Pixel build their tasks in separate worktrees; Sentinel runs the sandboxed tests and reviews. They run on Claude or on any OpenAI-compatible model, including DeepSeek on AMD GPUs through AMD Token Factory. Inside a room only, building the fixed sample app. | Preview |
 
 A member still approves and merges. The connected client cannot.
 
@@ -109,7 +109,7 @@ Step-by-step rules, including which token opens what, are in [User flows](docs/p
 
 ## Start
 
-Requires Node 22+, pnpm, Git, Docker, and an authenticated Claude Code installation when you want the local agent runtime.
+Requires Node 22+, pnpm, Git, Docker, and one model provider for the hosted agents: an authenticated Claude Code installation, or any OpenAI-compatible endpoint such as AMD Token Factory or Nebius Token Factory. See [Model providers](#model-providers).
 
 ```sh
 pnpm install
@@ -120,6 +120,37 @@ pnpm demo:image
 claude auth status
 pnpm dev
 ```
+
+### Model providers
+
+Hosted Colag agents run on the provider named in `COLAG_MODEL_PROVIDER`. Everything above the model is the same on both paths: the plan, claimed tasks, worktrees, the sandboxed tests, and the human approve-and-merge gate.
+
+| Provider | What runs | Configure |
+| --- | --- | --- |
+| `claude` (default) | The Claude Code CLI on this host, with built-in tools disabled and only Colag's MCP tools. | `claude auth login`, optional `CLAUDE_BIN` |
+| `openai` | A tool-calling loop against any OpenAI-compatible chat endpoint. Tested with AMD Token Factory serving DeepSeek-V4.1-Flash on AMD GPUs. Nebius Token Factory, a vLLM server, or a local server take the same three settings. | `COLAG_MODEL_BASE_URL`, `COLAG_MODEL_API_KEY`, `COLAG_MODEL_NAME` |
+
+AMD Token Factory, with the team key from notebooks.amd.com/tokenfactory:
+
+```sh
+COLAG_MODEL_PROVIDER=openai
+COLAG_MODEL_BASE_URL=https://developer.amd.com.cn/radeon/api/v1
+COLAG_MODEL_API_KEY=rc-...
+COLAG_MODEL_NAME=DeepSeek-V4.1-Flash
+```
+
+Nebius Token Factory:
+
+```sh
+COLAG_MODEL_PROVIDER=openai
+COLAG_MODEL_BASE_URL=https://api.tokenfactory.nebius.com/v1
+COLAG_MODEL_API_KEY=...
+COLAG_MODEL_NAME=nvidia/nemotron-3-super-120b-a12b
+```
+
+Shared keys are rate limited (AMD's team key: 20 requests a minute). The runtime waits out 429 and 502–504 answers, honoring `Retry-After`, up to `COLAG_MODEL_MAX_RETRIES` times (default 5). Structured results, such as Atlas's plan, are checked against their schema; a reply that does not fit is sent back to the model with the problems named, at most twice.
+
+On the `openai` path the model only sees Colag's tool catalog, and each tool call goes through the same authorized HTTP tool endpoint the MCP bridge uses. Token usage per run is reported in the agent's result event. `GET /api/v1/health` reports the active provider under the `model` check.
 
 Open the web app and sign in with your email. In development the sign-in response includes the one-time code. Migrations run at service startup. The service binds to `COLAG_HOST` (loopback unless you set it) and the browser origin comes from `COLAG_PUBLIC_ORIGIN`.
 
@@ -184,16 +215,16 @@ pnpm build
 DATABASE_URL=postgres://127.0.0.1:5432/colag_test COLAG_DATABASE_TESTS=1 pnpm test
 COLAG_TEST_DATABASE_URL=postgres://127.0.0.1:5432/colag_test pnpm test:integration
 pnpm test:browser
-pnpm test:claude
+pnpm test:model
 pnpm demo:image && XAI_API_KEY=… pnpm test:demo
 ```
 
-Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The Claude smoke check uses your authenticated account and only reads the project.
+Create the dedicated `colag_test` database before integration tests. The deterministic integration test uses real PostgreSQL, real Git worktrees, and the A2A SDK, and injects fixture agents and test results. Test injection is rejected outside `NODE_ENV=test`. Browser checks use installed Chrome and require the app running. They verify two-session document synchronization and responsive widths. The model smoke check runs one hosted agent against the configured provider and only reads the project.
 
 A complete live acceptance run uses the normal UI and Docker. Approval gates stay human actions. The framework does not approve its own plan or merge on your behalf.
 
 ## Boundaries
 
-Accounts, invites, and rooms are in. Each room is one disposable repository and one shared document. The coder is a connected client, and the room does not open without one. Hosted Colag agents are visible and marked coming soon. One independent QA review. External A2A endpoints are explicit.
+Accounts, invites, and rooms are in. Each room is one disposable repository and one shared document. The coder is a connected client, and the room does not open without one. Hosted Colag agents are a preview: a member can command them inside a room, but they cannot be chosen as the coder when a room is created. One independent QA review. External A2A endpoints are explicit.
 
 Not in this product: billing, importing an existing repository, a marketplace of third-party MCP servers, a model key per user, remote push, or Kubernetes.

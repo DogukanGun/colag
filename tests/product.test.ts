@@ -147,9 +147,9 @@ test(
     engine.configureTestRuntime({
       preflight: async () => ({
         docker: { ok: true, detail: "ok" },
-        claude: { ok: true, detail: "ok" },
+        model: { ok: true, detail: "ok" },
       }),
-      runClaude: async (request) => {
+      runAgent: async (request) => {
         if (request.schema)
           return {
             title: "Prompted plan",

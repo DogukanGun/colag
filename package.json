@@ -13,7 +13,7 @@
     "demo:a2a": "tsx packages/adapters/src/demo-agent.ts",
     "test:integration": "tsx scripts/test-integration.ts",
     "test:browser": "node scripts/browser-check.mjs",
-    "test:claude": "tsx scripts/smoke-claude.ts",
+    "test:model": "tsx scripts/smoke-model.ts",
     "infra:up": "docker compose -f infrastructure/compose.yaml up -d",
     "infra:down": "docker compose -f infrastructure/compose.yaml down",
     "test:live": "tsx scripts/test-live.ts",
