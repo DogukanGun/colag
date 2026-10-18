@@ -119,15 +119,13 @@ export async function recordWalk() {
     context.setDefaultTimeout(25_000);
     takes.push(
       await shoot(context, "landing", async (page, hand, beat, hold) => {
-        await page.goto(`${base}/?v=sales`, { waitUntil: "domcontentloaded" });
-        const headline = page.getByRole("heading", { name: /The whole room/ });
+        await page.goto(base, { waitUntil: "domcontentloaded" });
+        const headline = page.getByRole("heading", { name: "Sign in to Colag" });
         await headline.waitFor();
         const started = Date.now();
         beat("intro");
         await hand.move(240, 280);
         await hand.hover(headline);
-        await hand.click(page.getByRole("link", { name: "How it works" }));
-        await page.locator("#client").waitFor();
         await hold("intro", started);
       }),
     );
@@ -156,26 +154,22 @@ export async function recordWalk() {
         await hand.click(page.getByRole("button", { name: /Bring your agent/ }));
         await hold("bring", started);
 
-        const gate = page.getByRole("dialog", { name: "Who builds this?" });
+        const gate = page.getByRole("dialog", { name: "Connect a client" });
         await gate.waitFor();
         started = Date.now();
         beat("closed");
-        await hand.hover(gate.getByText("Coming soon"));
-        await hand.click(page.getByRole("button", { name: "Your agent" }));
         await hand.typeInto(page.getByLabel("Client name"), "Cursor", true);
         await hand.click(page.getByRole("button", { name: "Create connection" }));
-        await page.getByRole("dialog", { name: "Connection ready" }).waitFor();
-        await hand.pause(700);
-        await hand.click(page.getByRole("button", { name: "Enter the room" }));
-        await page.getByText("Coder").first().waitFor();
-        if ((await page.getByRole("button", { name: "Revoke" }).count()) > 0)
-          throw new Error("The coder is still revocable");
+        await page.getByLabel("Token").waitFor();
+        await hand.pause(600);
+        await hand.click(page.getByRole("button", { name: "Close" }));
+        const client = page.getByText("Alex · Cursor");
+        await client.waitFor();
         await hold("closed", started);
 
         started = Date.now();
         beat("coder");
-        await hand.hover(page.locator(".coder-card"));
-        await hand.hover(page.getByRole("button", { name: "Replace" }));
+        await hand.hover(client);
         await hold("coder", started);
 
         started = Date.now();
@@ -190,15 +184,8 @@ export async function recordWalk() {
         await hand.click(page.getByRole("link", { name: "Colag home" }));
         await home.waitFor();
         await hand.click(page.getByRole("button", { name: /Make an app together/ }));
-        await page.getByRole("dialog", { name: "Who builds this?" }).waitFor();
-        await hand.click(page.getByRole("button", { name: "Your agent" }));
-        await hand.typeInto(page.getByLabel("Client name"), "Cursor", true);
-        await hand.click(page.getByRole("button", { name: "Create connection" }));
-        await page.getByRole("button", { name: "Enter the room" }).waitFor();
-        await hand.click(page.getByRole("button", { name: "Enter the room" }));
         const board = page.getByLabel("Shared design board");
         await board.waitFor();
-        await page.getByText("The connected coder builds from this board.").waitFor();
         await hold("board", started);
 
         started = Date.now();
@@ -316,12 +303,19 @@ export async function recordWalk() {
     takes.push(
       await shoot(context, "soon", async (page, hand, beat, hold) => {
         await page.goto(base, { waitUntil: "domcontentloaded" });
-        const soon = page.getByText("Use a Colag agent");
+        const soon = page.getByRole("button", { name: /Use a Colag agent/ });
         await soon.waitFor();
+        await hand.hover(soon);
+        await hand.click(soon);
+        const roster = page.getByRole("dialog", { name: "Command an agent" });
+        await roster.waitFor();
         const started = Date.now();
         beat("hosted");
-        await hand.hover(soon);
-        await hand.hover(page.getByText("Coming soon").last());
+        await hand.hover(roster.getByRole("button", { name: /Atlas/ }));
+        await hand.pause(700);
+        await hand.hover(roster.getByRole("button", { name: /Forge/ }));
+        await hand.pause(500);
+        await hand.hover(roster.getByRole("button", { name: /Pixel/ }));
         await hold("hosted", started);
       }),
     );

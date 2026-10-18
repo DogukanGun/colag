@@ -98,7 +98,7 @@ const cueClip: Record<LineId, string> = {
 export function mux(takes: Take[]) {
   mkdirSync(outDir, { recursive: true });
   card("title", 4, "The whole room.", "One Colag.");
-  card("end", 5, "Connect a client.", "colag-eight.vercel.app");
+  card("end", 5, "Connect a client.", "Agents run on AMD Token Factory.");
   const parts = [
     resolve(outDir, "title.mp4"),
     ...takes.map((take) => {

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { speak } from "../packages/runtime/src/tts.ts";
+import { speak, xaiKey } from "../packages/runtime/src/tts.ts";
 
 export const lines = [
   {
@@ -14,11 +14,11 @@ export const lines = [
   },
   {
     id: "closed",
-    text: "That client is the coder, and the room stays closed until it is connected.",
+    text: "You name the client, and it joins the room over Colag's own connection.",
   },
   {
     id: "coder",
-    text: "The coder is named in the room. You replace them with another client. The work does not lose its coder.",
+    text: "The client is named in the room, next to you.",
   },
   {
     id: "plan",
@@ -34,7 +34,7 @@ export const lines = [
   },
   {
     id: "hosted",
-    text: "Hosted Colag agents are coming. Today, your own agent does the building.",
+    text: "Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs plans the work, and you still approve and merge.",
   },
   {
     id: "cta",
@@ -67,17 +67,24 @@ function duration(file: string) {
 export async function generateVoice() {
   mkdirSync(outDir, { recursive: true });
   const durations = {} as Durations;
+  const spoken = Boolean(xaiKey());
   for (const line of lines) {
-    const cached = await speak(line.text, {
-      voice: "leo",
-      language: "en",
-      format: "mp3",
-      cacheDir: resolve(outDir, ".cache"),
-    }).catch((error: Error) => {
-      throw new Error(`Voice ${line.id} failed: ${error.message}`);
-    });
     const file = resolve(outDir, `${line.id}.mp3`);
-    copyFileSync(cached, file);
+    if (spoken) {
+      const cached = await speak(line.text, {
+        voice: "leo",
+        language: "en",
+        format: "mp3",
+        cacheDir: resolve(outDir, ".cache"),
+      }).catch((error: Error) => {
+        throw new Error(`Voice ${line.id} failed: ${error.message}`);
+      });
+      copyFileSync(cached, file);
+    } else {
+      const aiff = resolve(outDir, `${line.id}.aiff`);
+      execFileSync("say", ["-v", "Samantha", "-o", aiff, line.text]);
+      execFileSync("ffmpeg", ["-y", "-i", aiff, "-codec:a", "libmp3lame", "-qscale:a", "4", file]);
+    }
     durations[line.id] = duration(file);
     console.log(`${line.id} ${durations[line.id].toFixed(2)}s`);
   }

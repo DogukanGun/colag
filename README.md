@@ -15,11 +15,11 @@
   <a href="https://github.com/DogukanGun/colag/blob/main/docs/product-flows.md">User flows</a>
 </p>
 
-https://github.com/user-attachments/assets/bbaf70d9-da41-4a24-8845-f372a8509a44
+https://github.com/DogukanGun/colag/releases/download/demo-video/colag-sales-demo.mp4
 
-<p align="center">Two minutes, with sound. Unmute to hear it.</p>
+<p align="center">About a minute and a half, with sound. Unmute to hear it.</p>
 
-The demo is the product, not a mock. A person signs in, connects Cursor as the coder, and the room stays closed until that client is in. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing.
+The demo is the product, not a mock. A person signs in and chooses how to work. They name Cursor, and it joins the room over Colag's own connection, listed next to them. The plan is shared. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing. Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs can plan the work, and a person still approves and merges.
 
 ## What you can do
 
@@ -35,44 +35,44 @@ A member still approves and merges. The connected client cannot.
 ```mermaid
 flowchart LR
   user[Signed-in person]
-  gate[Who builds this?]
+  home[How do you want to work?]
   client[Cursor or Claude Code]
-  room[Room]
-  plan[Shared plan]
+  hosted[Hosted agent on AMD Token Factory]
   board[Design board]
+  room[Room]
   review[Approve and merge]
 
-  user --> gate
-  gate --> client
+  user --> home
+  home --> client
+  home --> hosted
+  home --> board
   client -->|MCP| room
-  room --> plan
-  room --> board
-  plan --> review
-  board --> review
+  hosted --> room
+  board --> room
+  room --> review
 ```
 
-## The room stays closed until the coder is in
+## Three ways into a room
 
-Creating a room asks who builds it. The working answer is your own client. A Colag agent is shown, labeled coming soon, and cannot be chosen.
+Home asks how you want to work.
 
-1. Name the client. Cursor or Claude Code.
-2. Copy the setup. The token is shown once, off to the side of the room.
-3. Enter the room only after that connection exists.
-4. The coder is named in the room. Replace them with another client. The coder is not revoked out from under the work.
-5. Write the plan together. Code goes through a claimed task. A member reviews the diff and merges. The client cannot.
+1. **Bring your agent.** Name the client, such as Cursor or Claude Code. Copy the setup. The token is shown once. The client is named in the room, next to you, and joins over Colag's MCP.
+2. **Use a Colag agent.** Pick Atlas, Ada, Forge, Pixel, or Sentinel and send a command. Hosted agents run on Claude or on any OpenAI-compatible model, including DeepSeek on AMD GPUs through AMD Token Factory. You still approve and merge.
+3. **Make an app together.** One board for requirements, algorithms, diagrams, and drawings. Everyone in the room writes the same document.
+
+Code goes through a claimed task. A member reviews the diff and merges. The connected client cannot approve or merge. Revoke removes your own connection.
 
 ```mermaid
 sequenceDiagram
   participant Member
   participant Room
   participant Client as Cursor or Claude Code
-  Member->>Room: Who builds this?
-  Room-->>Member: The room stays closed
-  Member->>Room: Connect the client
-  Room-->>Member: Coder is named
-  Client->>Room: Plan, tasks, and claimed files
-  Member->>Room: Replace the coder, or approve and merge
-  Note over Client,Room: The client cannot approve, merge, or be revoked
+  Member->>Room: Name the client
+  Room-->>Member: Setup and token, once
+  Client->>Room: Joins over MCP
+  Room-->>Member: Client is named beside you
+  Member->>Room: Approve and merge
+  Note over Client,Room: The client cannot approve or merge
 ```
 
 Public MCP for the live product: `https://colag.2-28-123-220.sslip.io/mcp`
@@ -117,7 +117,6 @@ cp .env.example .env
 pnpm infra:up
 docker pull node:22-alpine
 pnpm demo:image
-claude auth status
 pnpm dev
 ```
 
@@ -156,7 +155,7 @@ Open the web app and sign in with your email. In development the sign-in respons
 
 Ports: UI 3000, API 4310, Yjs 4311, A2A 4312, optional A2A fixture 4320. PostgreSQL and Redis defaults are 54329 and 63799. You can point `.env` at existing local servers; use a dedicated database. Generated code never falls back to host execution when Docker is unavailable.
 
-The live app is [colag-eight.vercel.app](https://colag-eight.vercel.app). It talks to the hosted API. Production does not print login codes. Codes are emailed when mail is configured.
+The live app is [colag-eight.vercel.app](https://colag-eight.vercel.app). The browser calls `/api` on that host, and the app proxies those requests to the API at `https://colag.2-28-123-220.sslip.io`. The shared board connects to `wss://collab.2-28-123-220.sslip.io`. Public MCP is `https://colag.2-28-123-220.sslip.io/mcp`. Production does not print login codes. Codes are emailed when mail is configured.
 
 ## Sample build
 
