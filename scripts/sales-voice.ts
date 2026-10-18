@@ -34,27 +34,27 @@ export const lines = [
   },
   {
     id: "changes",
-    text: "Changes stays empty until an agent proposes a diff. A member reviews it and merges.",
+    text: "Forge proposed the sign-in change. The diff is register, login, authenticate, and logout.",
   },
   {
     id: "artifacts",
-    text: "Test results and notes are published here, with the name of who made them.",
+    text: "The tests passed, and the result is published in the room.",
   },
   {
     id: "build",
-    text: "The sandbox runs the room's commit. There is nothing to run until a build exists.",
+    text: "This commit is the candidate. It can run in the sandbox.",
   },
   {
     id: "desk",
-    text: "The desk answers a customer only from the company documents. A member approves the reply.",
+    text: "The desk answered from the returns document. A customer has thirty days, and a member approves the reply.",
   },
   {
     id: "film",
-    text: "A demo films that build, speaks with a voice, and keeps the video in the room.",
+    text: "The sign-up demo is ready. Press play.",
   },
   {
     id: "live",
-    text: "Live is the room itself, while the people and the agents are working.",
+    text: "Forge is working in the room, with the rest of the crew.",
   },
   {
     id: "hosted",

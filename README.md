@@ -15,11 +15,11 @@
   <a href="https://github.com/DogukanGun/colag/blob/main/docs/product-flows.md">User flows</a>
 </p>
 
-https://github.com/user-attachments/assets/e465fd5a-e161-4bf2-ac5c-b891b2a1a055
+https://github.com/user-attachments/assets/54d25468-d550-4f0e-9096-7e0e96a6de87
 
 <p align="center">About two minutes, with sound. The voice is xAI. Unmute to hear it.</p>
 
-The demo is the product, not a mock. A person signs in and chooses how to work. They name Cursor, and it joins the room over Colag's own connection, listed next to them. The plan is shared. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing. The walk then opens changes, artifacts, the build, the desk, demos, and the live room. Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs can plan the work, and a person still approves and merges.
+The demo is the product, not a mock. A person signs in and chooses how to work. They name Cursor, and it joins the room over Colag's own connection, listed next to them. The plan is shared. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing. The walk then opens a real sign-in diff, the published test result, the sandbox on that commit, a desk reply cited from the company document, a demo that plays, and the live room. Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs can plan the work, and a person still approves and merges.
 
 ## What you can do
 

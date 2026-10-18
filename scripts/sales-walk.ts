@@ -30,6 +30,8 @@ function psql(sql: string) {
 }
 
 function seed() {
+  const judge = process.env.COLAG_JUDGE_ROOM || "";
+  if (judge && !/^[0-9a-f-]{36}$/.test(judge)) throw new Error("COLAG_JUDGE_ROOM is not a room id");
   const userId = randomBytes(16).toString("hex");
   const sessionId = randomBytes(16).toString("hex");
   const token = randomBytes(32).toString("hex");
@@ -45,6 +47,11 @@ DELETE FROM users WHERE email='${email}';
 INSERT INTO users(id, email, display_name) VALUES ('${userId}', '${email}', 'Alex');
 INSERT INTO sessions(id, user_id, token_hash, expires_at)
   VALUES ('${sessionId}', '${userId}', '${tokenHash}', now() + interval '1 day');
+${
+  judge
+    ? `INSERT INTO memberships(room_id, user_id, role) VALUES ('${judge}', '${userId}', 'member') ON CONFLICT DO NOTHING;`
+    : ""
+}
 COMMIT;
 `);
   return token;
@@ -299,33 +306,68 @@ export async function recordWalk() {
       }, 0.82),
     );
 
+    const judgeRoom = process.env.COLAG_JUDGE_ROOM;
+    if (!judgeRoom) throw new Error("COLAG_JUDGE_ROOM is required");
     if (!roomUrl) throw new Error("The board room did not open");
     takes.push(
       await shoot(context, "room", async (page, hand, beat, hold) => {
-        await page.goto(roomUrl, { waitUntil: "domcontentloaded" });
+        await page.goto(`${base}/rooms/${judgeRoom}`, { waitUntil: "domcontentloaded" });
         await page.getByRole("button", { name: /Changes/ }).waitFor();
-        const open = async (name: RegExp, line: LineId, heading: string) => {
-          const started = Date.now();
-          beat(line);
-          const tab = page.getByRole("button", { name }).first();
-          await hand.click(tab);
-          const headingText = page.getByText(heading, { exact: true });
-          await headingText.waitFor();
-          await hand.hover(headingText);
-          await hold(line, started);
-        };
-        await open(/Changes/, "changes", "No changes yet");
-        await open(/Artifacts/, "artifacts", "Nothing published yet");
-        await open(/^Build/, "build", "Nothing has been built");
+        const changesStarted = Date.now();
+        beat("changes");
+        await hand.click(page.getByRole("button", { name: /Changes/ }).first());
+        const change = page.getByRole("button", { name: /Code change/ });
+        await change.waitFor();
+        await hand.click(change);
+        const diffFile = page.getByRole("button", { name: "backend/auth.mjs" });
+        await diffFile.waitFor();
+        await page
+          .locator(".monaco-editor .view-line")
+          .first()
+          .waitFor({ timeout: 8_000 })
+          .catch(() => undefined);
+        await hand.hover(diffFile);
+        await hand.pause(1200);
+        await hold("changes", changesStarted);
+        await hand.click(page.getByRole("button", { name: "Close details" }));
+        const artifactsStarted = Date.now();
+        beat("artifacts");
+        await hand.click(page.getByRole("button", { name: /Artifacts/ }).first());
+        const tests = page.getByRole("button", { name: /Authentication tests/ });
+        await tests.waitFor();
+        await hand.click(tests);
+        const passed = page.getByText("register, login, authenticate, and logout passed.");
+        await passed.waitFor();
+        await hand.hover(passed);
+        await hold("artifacts", artifactsStarted);
+        await hand.click(page.getByRole("button", { name: "Close details" }));
+        const buildStarted = Date.now();
+        beat("build");
+        await hand.click(page.getByRole("button", { name: /^Build/ }).first());
+        const candidate = page.getByText("Candidate");
+        await candidate.waitFor();
+        await hand.hover(page.getByRole("button", { name: "Buy this build" }));
+        await hold("build", buildStarted);
         const deskStarted = Date.now();
         beat("desk");
         await hand.click(page.getByRole("button", { name: /^Desk$/ }));
-        const message = page.getByLabel("Customer message");
-        await message.waitFor();
-        await hand.hover(message);
-        await hand.hover(page.getByRole("button", { name: "Draft reply" }));
+        const reply = page.locator(".desk-reply");
+        await reply.waitFor();
+        await hand.hover(reply);
         await hold("desk", deskStarted);
-        await open(/^Demo/, "film", "Nothing has been built");
+        const filmStarted = Date.now();
+        beat("film");
+        await hand.click(page.getByRole("button", { name: /^Demo/ }).first());
+        const player = page.locator("video.demo-video");
+        await player.waitFor();
+        await player.evaluate((node) => {
+          const video = node as HTMLVideoElement;
+          video.currentTime = 15;
+          return video.play().catch(() => undefined);
+        });
+        await hand.pause(900);
+        await hand.hover(player);
+        await hold("film", filmStarted);
         const liveStarted = Date.now();
         beat("live");
         await hand.click(page.getByRole("button", { name: /^Live$/ }));
