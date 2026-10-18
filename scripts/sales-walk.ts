@@ -161,6 +161,26 @@ export async function recordWalk() {
         await hand.typeInto(page.getByLabel("Client name"), "Cursor", true);
         await hand.click(page.getByRole("button", { name: "Create connection" }));
         await page.getByLabel("Token").waitFor();
+        const token = await page.getByLabel("Token").inputValue();
+        const server = await page.getByLabel("Server").inputValue();
+        const joined = await page.request.post(server, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json, text/event-stream",
+          },
+          data: {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2024-11-05",
+              capabilities: {},
+              clientInfo: { name: "cursor", version: "1.0" },
+            },
+          },
+        });
+        if (!joined.ok()) throw new Error(`Cursor could not join the room (${joined.status()})`);
         await hand.pause(600);
         await hand.click(page.getByRole("button", { name: "Close" }));
         const client = page.getByText("Alex · Cursor");
@@ -280,6 +300,41 @@ export async function recordWalk() {
     );
 
     if (!roomUrl) throw new Error("The board room did not open");
+    takes.push(
+      await shoot(context, "room", async (page, hand, beat, hold) => {
+        await page.goto(roomUrl, { waitUntil: "domcontentloaded" });
+        await page.getByRole("button", { name: /Changes/ }).waitFor();
+        const open = async (name: RegExp, line: LineId, heading: string) => {
+          const started = Date.now();
+          beat(line);
+          const tab = page.getByRole("button", { name }).first();
+          await hand.click(tab);
+          const headingText = page.getByText(heading, { exact: true });
+          await headingText.waitFor();
+          await hand.hover(headingText);
+          await hold(line, started);
+        };
+        await open(/Changes/, "changes", "No changes yet");
+        await open(/Artifacts/, "artifacts", "Nothing published yet");
+        await open(/^Build/, "build", "Nothing has been built");
+        const deskStarted = Date.now();
+        beat("desk");
+        await hand.click(page.getByRole("button", { name: /^Desk$/ }));
+        const message = page.getByLabel("Customer message");
+        await message.waitFor();
+        await hand.hover(message);
+        await hand.hover(page.getByRole("button", { name: "Draft reply" }));
+        await hold("desk", deskStarted);
+        await open(/^Demo/, "film", "Nothing has been built");
+        const liveStarted = Date.now();
+        beat("live");
+        await hand.click(page.getByRole("button", { name: /^Live$/ }));
+        const stage = page.locator(".live-stage");
+        await stage.waitFor();
+        await hand.hover(stage);
+        await hold("live", liveStarted);
+      }),
+    );
     takes.push(
       await shoot(context, "second", async (page, hand) => {
         await page.goto(roomUrl, { waitUntil: "domcontentloaded" });

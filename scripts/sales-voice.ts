@@ -33,6 +33,30 @@ export const lines = [
     text: "Requirements, the algorithm, and a diagram take shape on the board. The sketch is the same drawing for everyone in the room.",
   },
   {
+    id: "changes",
+    text: "Changes stays empty until an agent proposes a diff. A member reviews it and merges.",
+  },
+  {
+    id: "artifacts",
+    text: "Test results and notes are published here, with the name of who made them.",
+  },
+  {
+    id: "build",
+    text: "The sandbox runs the room's commit. There is nothing to run until a build exists.",
+  },
+  {
+    id: "desk",
+    text: "The desk answers a customer only from the company documents. A member approves the reply.",
+  },
+  {
+    id: "film",
+    text: "A demo films that build, speaks with a voice, and keeps the video in the room.",
+  },
+  {
+    id: "live",
+    text: "Live is the room itself, while the people and the agents are working.",
+  },
+  {
     id: "hosted",
     text: "Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs plans the work, and you still approve and merge.",
   },
@@ -72,7 +96,7 @@ export async function generateVoice() {
     const file = resolve(outDir, `${line.id}.mp3`);
     if (spoken) {
       const cached = await speak(line.text, {
-        voice: "leo",
+        voice: "eve",
         language: "en",
         format: "mp3",
         cacheDir: resolve(outDir, ".cache"),
