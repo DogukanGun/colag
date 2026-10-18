@@ -15,7 +15,7 @@
   <a href="https://github.com/DogukanGun/colag/blob/main/docs/product-flows.md">User flows</a>
 </p>
 
-https://github.com/DogukanGun/colag/releases/download/demo-video/colag-sales-demo.mp4
+https://github.com/user-attachments/assets/766adbd3-88ce-460f-970a-c8167a11f04c
 
 <p align="center">About a minute and a half, with sound. Unmute to hear it.</p>
 
