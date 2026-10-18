@@ -15,11 +15,15 @@
   <a href="https://github.com/DogukanGun/colag/blob/main/docs/product-flows.md">User flows</a>
 </p>
 
-https://github.com/user-attachments/assets/766adbd3-88ce-460f-970a-c8167a11f04c
+https://github.com/user-attachments/assets/54d25468-d550-4f0e-9096-7e0e96a6de87
 
-<p align="center">About a minute and a half, with sound. Unmute to hear it.</p>
+<p align="center">About two minutes, with sound. The voice is xAI. Unmute to hear it.</p>
 
-The demo is the product, not a mock. A person signs in and chooses how to work. They name Cursor, and it joins the room over Colag's own connection, listed next to them. The plan is shared. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing. Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs can plan the work, and a person still approves and merges.
+https://github.com/user-attachments/assets/760f19fb-026a-4f7c-9e6e-7b79fc84f883
+
+<p align="center">The live room, about a minute, with the same voice. You walk the studio with the crew.</p>
+
+The demo is the product, not a mock. A person signs in and chooses how to work. They name Cursor, and it joins the room over Colag's own connection, listed next to them. The plan is shared. On the board they write the requirements, the matching algorithm, a flowchart, and a sketch of the ride. A second person opens the same room and sees the same drawing. The walk then opens a real sign-in diff, the published test result, the sandbox on that commit, a desk reply cited from the company document, a demo that plays, and the live room. The second film stays in that room: arrow keys walk the floor, the crew speaks over their stations, Cursor sits at the desk, and space talks to the person beside you. Hosted agents run on AMD Token Factory. DeepSeek on AMD GPUs can plan the work, and a person still approves and merges.
 
 ## What you can do
 

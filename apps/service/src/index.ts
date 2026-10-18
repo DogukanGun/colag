@@ -30,12 +30,17 @@ const origin =
   process.env.COLAG_WEB_ORIGIN ||
   "http://localhost:3000";
 const allowedOrigins = Array.from(
-  new Set([
-    origin,
-    ...(process.env.COLAG_PUBLIC_ORIGIN
-      ? []
-      : ["http://127.0.0.1:3000", "http://localhost:3000"]),
-  ]),
+  new Set(
+    [
+      ...origin.split(","),
+      ...(process.env.COLAG_EXTRA_ORIGINS || "").split(","),
+      ...(process.env.COLAG_PUBLIC_ORIGIN
+        ? []
+        : ["http://127.0.0.1:3000", "http://localhost:3000"]),
+    ]
+      .map((value) => value.trim())
+      .filter(Boolean),
+  ),
 );
 await app.register(cors, { origin: allowedOrigins, credentials: true });
 await app.register(cookie);

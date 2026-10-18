@@ -91,6 +91,12 @@ const cueClip: Record<LineId, string> = {
   plan: "app",
   board: "app",
   same: "app",
+  changes: "room",
+  artifacts: "room",
+  build: "room",
+  desk: "room",
+  film: "room",
+  live: "room",
   hosted: "soon",
   cta: "end",
 };

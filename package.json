@@ -18,6 +18,7 @@
     "infra:down": "docker compose -f infrastructure/compose.yaml down",
     "test:live": "tsx scripts/test-live.ts",
     "demo:sales": "tsx scripts/sales-demo.ts",
+    "demo:live": "tsx scripts/live-demo.ts",
     "demo:image": "docker build -t colag-demo-recorder infrastructure/demo-recorder",
     "test:demo": "tsx scripts/test-demo.ts"
   },
