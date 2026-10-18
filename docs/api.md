@@ -2,6 +2,8 @@
 
 The browser signs in with POST /api/v1/auth/request and POST /api/v1/auth/verify, which sets an HttpOnly SameSite `colag_session` cookie. POST /api/v1/auth/logout revokes it. GET /api/v1/me returns the user and rejects agent tokens. Hosted agents and external A2A clients use scoped bearer tokens. Room MCP clients use a separate revocable bearer on `/mcp`. A session cookie does not authenticate MCP. Mutating requests require Idempotency-Key. Errors use {error, code}. Versioned updates reject stale versions with 409.
 
+The live web app at https://colag-eight.vercel.app proxies `/api` to https://colag.2-28-123-220.sslip.io. Public MCP is https://colag.2-28-123-220.sslip.io/mcp. The board editor connects to Hocuspocus at wss://collab.2-28-123-220.sslip.io.
+
 - GET /api/v1/health: PostgreSQL, Redis, Docker and Claude readiness.
 - GET/POST /api/v1/projects; GET /api/v1/projects/:id: project snapshot.
 - GET /api/v1/projects/:id/events?after=sequence: SSE durable replay.

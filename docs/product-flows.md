@@ -82,7 +82,7 @@ flowchart TD
   stranger --> denied
 ```
 
-A room is still a project internally, so events, documents, runs, and worktrees keep their current ids. Each room gets its own disposable Git repository on the server. The service binds to `COLAG_HOST` and allows the browser origin in `COLAG_PUBLIC_ORIGIN`. Unauthenticated requests still fail.
+A room is still a project internally, so events, documents, runs, and worktrees keep their current ids. Each room gets its own disposable Git repository on the server. The service binds to `COLAG_HOST` and allows the browser origin in `COLAG_PUBLIC_ORIGIN`. Unauthenticated requests still fail. On the live product the web app is https://colag-eight.vercel.app, the API and MCP are https://colag.2-28-123-220.sslip.io, and the board websocket is wss://collab.2-28-123-220.sslip.io.
 
 ## Bring your agent
 
@@ -92,7 +92,7 @@ The remote tools can inspect the room, read and append the plan, work with tasks
 
 ## Use a Colag agent
 
-The hosted roster is Atlas, Ada, Forge, Pixel, and Sentinel. A member picks one and sends `agent.prompt`. Colag runs that agent with the current Claude runtime and the in-process MCP bridge. The room event log is the transcript: the command, status, tool activity, and the resulting task or plan edit.
+The hosted roster is Atlas, Ada, Forge, Pixel, and Sentinel. A member picks one and sends `agent.prompt`. Colag runs that agent with the configured model provider and the in-process MCP bridge: Claude Code, or any OpenAI-compatible chat endpoint. The live service uses AMD Token Factory and DeepSeek on AMD GPUs. The room event log is the transcript: the command, status, tool activity, and the resulting task or plan edit.
 
 Atlas can draft the shared plan. Approval stays a separate human action in the room. A specialist works one ready task in that task’s worktree. Stop, block, and retry keep their current behavior. A failure is never marked complete. The connected client and the hosted agent both stop short of approve and merge.
 
