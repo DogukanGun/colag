@@ -28,7 +28,7 @@ The demo is the product, not a mock. A person signs in and chooses how to work. 
 | **Bring your agent** | Cursor or Claude Code joins over Colag’s own MCP and is the coder for the room. | Live |
 | **Make an app together** | One board for requirements, algorithms, Mermaid diagrams, and drawings. Everyone in the room writes the same document. | Live |
 | **Make a demo video** | The coder writes a short script; Colag films the room's build in a sandbox, adds a cheerful voice and music, and keeps an MP4 with an e-mail kit in the room. | Live |
-| **Command a Colag agent** | Atlas plans the run; Ada, Forge, and Pixel build their tasks in separate worktrees; Sentinel runs the sandboxed tests and reviews. They run on Claude or on any OpenAI-compatible model, including DeepSeek on AMD GPUs through AMD Token Factory. Inside a room only, building the fixed sample app. | Preview |
+| **Command a Colag agent** | Atlas plans the run; Ada, Forge, and Pixel build their tasks in separate worktrees; Sentinel runs the sandboxed tests and reviews. They run on Claude or on any OpenAI-compatible model, including NVIDIA Nemotron through Nebius Token Factory and DeepSeek on AMD GPUs through AMD Token Factory. Inside a room only, building the fixed sample app. | Preview |
 
 A member still approves and merges. The connected client cannot.
 
@@ -57,7 +57,7 @@ flowchart LR
 Home asks how you want to work.
 
 1. **Bring your agent.** Name the client, such as Cursor or Claude Code. Copy the setup. The token is shown once. The client is named in the room, next to you, and joins over Colag's MCP.
-2. **Use a Colag agent.** Pick Atlas, Ada, Forge, Pixel, or Sentinel and send a command. Hosted agents run on Claude or on any OpenAI-compatible model, including DeepSeek on AMD GPUs through AMD Token Factory. You still approve and merge.
+2. **Use a Colag agent.** Pick Atlas, Ada, Forge, Pixel, or Sentinel and send a command. Hosted agents run on Claude or on any OpenAI-compatible model, including NVIDIA Nemotron through Nebius Token Factory and DeepSeek on AMD GPUs through AMD Token Factory. You still approve and merge.
 3. **Make an app together.** One board for requirements, algorithms, diagrams, and drawings. Everyone in the room writes the same document.
 
 Code goes through a claimed task. A member reviews the diff and merges. The connected client cannot approve or merge. Revoke removes your own connection.
@@ -127,7 +127,7 @@ Hosted Colag agents run on the provider named in `COLAG_MODEL_PROVIDER`. Everyth
 | Provider | What runs | Configure |
 | --- | --- | --- |
 | `claude` (default) | The Claude Code CLI on this host, with built-in tools disabled and only Colag's MCP tools. | `claude auth login`, optional `CLAUDE_BIN` |
-| `openai` | A tool-calling loop against any OpenAI-compatible chat endpoint. Tested with AMD Token Factory serving DeepSeek-V4.1-Flash on AMD GPUs. Nebius Token Factory, a vLLM server, or a local server take the same three settings. | `COLAG_MODEL_BASE_URL`, `COLAG_MODEL_API_KEY`, `COLAG_MODEL_NAME` |
+| `openai` | A tool-calling loop against any OpenAI-compatible chat endpoint. Tested with Nebius Token Factory serving NVIDIA Nemotron 3 Super (`nvidia/nemotron-3-super-120b-a12b`), where the full run from plan to merge passes, and with AMD Token Factory serving DeepSeek-V4.1-Flash on AMD GPUs. A vLLM server or a local server take the same three settings. | `COLAG_MODEL_BASE_URL`, `COLAG_MODEL_API_KEY`, `COLAG_MODEL_NAME` |
 
 AMD Token Factory, with the team key from notebooks.amd.com/tokenfactory:
 
@@ -138,7 +138,7 @@ COLAG_MODEL_API_KEY=rc-...
 COLAG_MODEL_NAME=DeepSeek-V4.1-Flash
 ```
 
-Nebius Token Factory:
+Nebius Token Factory with NVIDIA Nemotron (the live demo runs on this):
 
 ```sh
 COLAG_MODEL_PROVIDER=openai
